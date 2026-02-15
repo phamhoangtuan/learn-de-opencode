@@ -100,6 +100,106 @@
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
 
+### Data Quality Requirements *(mandatory for data engineering features)*
+
+<!--
+  ACTION REQUIRED: Define data quality requirements per Constitution v2.0.0 Principle II.
+  Specify schemas, validation rules, and quality checks.
+-->
+
+- **Input Schema**: [Define expected input format, required fields, data types]
+- **Output Schema**: [Define output format, fields produced, data types]
+- **Validation Rules**: [List validation checks that must pass - completeness, range checks, format validation]
+- **Quality Metrics**: [Define quality indicators - record counts, validation pass rate, data freshness]
+- **Error Handling**: [How invalid data is handled - fail fast, skip, log and continue]
+
+*Example:*
+- **Input Schema**: CSV with columns: user_id (int), email (string), signup_date (ISO date)
+- **Validation Rules**: user_id > 0, email matches regex, signup_date within last 10 years
+- **Quality Metrics**: Total records, validation failures by rule, processing time
+- **Error Handling**: Log invalid records to errors.jsonl, continue processing valid records
+
+### Metadata Requirements *(mandatory for data engineering features)*
+
+<!--
+  ACTION REQUIRED: Define metadata capture per Constitution v2.0.0 Principle IV.
+  Document what metadata will be captured, stored, and exposed for lineage tracking.
+-->
+
+- **Technical Metadata**: [Pipeline execution metadata - runtime, record counts, source/target info]
+- **Business Metadata**: [Dataset descriptions, field definitions, data ownership]
+- **Operational Metadata**: [Execution logs, performance metrics, error logs]
+- **Lineage Information**: [Source systems, transformation steps, dependencies]
+- **Metadata Storage**: [Where metadata will be stored - YAML configs, catalog tool, etc.]
+
+*Example:*
+- **Technical Metadata**: Store pipeline_run_id, execution_timestamp, records_in, records_out in run_metadata.json
+- **Business Metadata**: Document dataset purpose in README.md, field definitions in schema.yaml
+- **Operational Metadata**: Log execution details to logs/pipeline_{date}.log
+- **Lineage Information**: Track source files in manifest.yaml, document transformations in pipeline docstrings
+- **Metadata Storage**: Use YAML config files in metadata/ directory, indexed by DuckDB catalog
+
+### Security & Privacy Requirements *(mandatory for data engineering features)*
+
+<!--
+  ACTION REQUIRED: Define security controls per Constitution v2.0.0 Principle V.
+  Address data protection, PII handling, access control, and compliance.
+-->
+
+- **Data Classification**: [Classify data sensitivity - public, internal, confidential, PII]
+- **PII/Sensitive Data**: [List PII fields, masking/encryption requirements]
+- **Access Control**: [Who can read/write data, authentication requirements]
+- **Encryption**: [At-rest and in-transit encryption requirements]
+- **Audit Logging**: [What security events must be logged]
+- **Compliance**: [Relevant regulations - GDPR, CCPA, etc.]
+
+*Example:*
+- **Data Classification**: Input contains PII (email, phone), output is aggregated (public)
+- **PII/Sensitive Data**: Email and phone fields must be hashed using SHA-256 before storage
+- **Access Control**: Input data readable by data-eng team only, outputs readable by analytics team
+- **Encryption**: Raw data files encrypted at rest using project encryption key
+- **Audit Logging**: Log all data access attempts with timestamp, user, operation
+- **Compliance**: GDPR-compliant - support data deletion requests, 30-day retention for raw PII
+
+### Data Lineage Documentation *(mandatory for data engineering features)*
+
+<!--
+  ACTION REQUIRED: Document data flow per Constitution v2.0.0 Principles IV and VI.
+  Trace data from source to destination with all transformations.
+-->
+
+- **Source Systems**: [List all data sources - files, APIs, databases]
+- **Transformation Steps**: [High-level transformation logic in sequence]
+- **Output Destinations**: [Where processed data goes - files, databases, APIs]
+- **Dependencies**: [External dependencies - reference data, configuration files]
+- **Data Flow Diagram**: [ASCII diagram or reference to external diagram file]
+
+*Example:*
+```
+Source Systems:
+  - raw_users.csv (S3 bucket: data-lake/raw/)
+  - user_events.jsonl (S3 bucket: data-lake/events/)
+
+Transformation Steps:
+  1. Load raw_users.csv → validate schema → filter active users
+  2. Load user_events.jsonl → parse JSON → deduplicate by event_id
+  3. Join users + events on user_id → aggregate event counts
+  4. Apply PII masking → format as Parquet
+
+Output Destinations:
+  - users_with_events.parquet (S3 bucket: data-lake/processed/)
+  - pipeline_metadata.json (S3 bucket: data-lake/metadata/)
+
+Dependencies:
+  - event_types.yaml (reference data for event classification)
+  - pipeline_config.yaml (thresholds, date ranges)
+
+Data Flow:
+  raw_users.csv ──┐
+                  ├─> [validate] ─> [filter] ─┐
+  user_events.jsonl ─> [parse] ─> [dedupe] ───┴─> [join] ─> [aggregate] ─> [mask PII] ─> users_with_events.parquet
+```
+
 ## Success Criteria *(mandatory)*
 
 <!--

@@ -31,7 +31,34 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Verify compliance with core principles from `.specify/memory/constitution.md` (v2.0.0):
+
+### Core Principles (7 Principles)
+
+- **I. Modularity & Reusability**: Component clearly separable? CLI interface planned? Single purpose defined? Configuration externalized?
+- **II. Data Quality & Governance**: Input/output schemas defined? Validation strategy documented? Quality metrics (6Cs) identified? Data ownership clear?
+- **III. Test-First Development (NON-NEGOTIABLE)**: Test cases drafted before implementation? TDD workflow acknowledged? 80% coverage target set?
+- **IV. Metadata & Lineage**: Logging strategy defined? Lineage tracking planned? Operational metadata captured? Deterministic design confirmed?
+- **V. Data Security & Privacy**: Secrets management strategy defined? PII identified and protection planned? Encryption requirements clear?
+- **VI. Data Architecture & Integration**: Pipeline pattern chosen (batch/streaming/CDC)? Error handling strategy defined? Integration points documented?
+- **VII. Simplicity & Performance**: Simplest approach attempted first? Complexity justified if needed? Performance baseline defined?
+
+### DMBOK Knowledge Areas (if applicable)
+
+Review applicable knowledge areas for this feature:
+
+- **Data Governance**: Policies, ownership, compliance requirements documented?
+- **Data Architecture**: Reference pattern chosen? Layers (ingestion, transform, quality, storage) defined?
+- **Data Modeling**: Conceptual/logical/physical models planned? Schema versioning strategy?
+- **Data Storage**: Storage technology chosen? Backup strategy? Retention policy?
+- **Data Security**: Encryption at rest/transit? Access control? Audit logging?
+- **Data Integration**: ETL/ELT pattern? Incremental or full load? Idempotency ensured?
+- **Metadata Management**: Data catalog planned? Lineage visualization? Technical/business metadata?
+- **Data Quality**: Quality dimensions (6Cs) defined? Validation rules? Quality SLAs?
+
+**Compliance Status**: [PASS / NEEDS REVIEW / FAIL]
+
+If any gate fails, document justification in Complexity Tracking section below.
 
 ## Project Structure
 
