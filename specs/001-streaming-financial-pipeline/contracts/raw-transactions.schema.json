@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://learn-de.local/schemas/raw-transactions/v1.0.0",
+  "title": "Raw Transaction",
+  "description": "Financial transaction record published by the data generator to the Kafka raw-transactions topic. This is the canonical input contract for the streaming pipeline.",
+  "type": "object",
+  "required": [
+    "transaction_id",
+    "timestamp",
+    "account_id",
+    "amount",
+    "currency",
+    "merchant_name",
+    "merchant_category",
+    "transaction_type",
+    "location_country",
+    "status"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "transaction_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Globally unique transaction identifier (UUID v4)",
+      "examples": ["550e8400-e29b-41d4-a716-446655440000"]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the transaction occurred, ISO 8601 with timezone. Must not be in the future by more than 1 minute.",
+      "examples": ["2026-02-16T14:30:00.000Z"]
+    },
+    "account_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9]{10,12}$",
+      "description": "Account initiating the transaction (alphanumeric, 10-12 characters)",
+      "examples": ["ACC123456789"]
+    },
+    "amount": {
+      "type": "number",
+      "exclusiveMinimum": -50000.01,
+      "exclusiveMaximum": 50000.01,
+      "not": { "const": 0 },
+      "description": "Monetary value. Positive for charges, negative for refunds. Must be non-zero. Range: -50000.00 to 50000.00.",
+      "examples": [125.50, -29.99, 10500.00]
+    },
+    "currency": {
+      "type": "string",
+      "enum": ["USD", "EUR", "GBP", "JPY"],
+      "description": "ISO 4217 currency code (minimum supported set)"
+    },
+    "merchant_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Merchant or counterparty name",
+      "examples": ["Amazon", "Starbucks", "Shell Gas Station"]
+    },
+    "merchant_category": {
+      "type": "string",
+      "enum": ["retail", "dining", "travel", "online", "groceries", "entertainment", "utilities"],
+      "description": "Merchant Classification Code category"
+    },
+    "transaction_type": {
+      "type": "string",
+      "enum": ["purchase", "withdrawal", "transfer", "refund"],
+      "description": "Type of financial operation"
+    },
+    "location_country": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$",
+      "description": "ISO 3166-1 alpha-2 country code where transaction occurred",
+      "examples": ["US", "GB", "JP", "DE"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "completed", "failed", "reversed"],
+      "description": "Current transaction state. Valid transitions: pending→completed, pending→failed, completed→reversed."
+    }
+  }
+}
