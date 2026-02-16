@@ -10,7 +10,7 @@ Build a local streaming data pipeline on Docker Compose for MacBook Air M1 that 
 ## Technical Context
 
 **Language/Version**: Python 3.11+ (data generator, CLI tools), Java/Scala for Flink jobs (or PyFlink)  
-**Primary Dependencies**: Apache Kafka (message broker), Apache Flink (stream processing), Apache Iceberg (table format), Apache Arrow (columnar in-memory), confluent-kafka (Python Kafka client), Docker Compose  
+**Primary Dependencies**: Apache Kafka (message broker), Apache Flink (stream processing), Apache Iceberg (table format), Apache Arrow (columnar in-memory format — used implicitly by PyIceberg and DuckDB for zero-copy table reads; no direct application code required), confluent-kafka (Python Kafka client), Docker Compose  
 **Storage**: Apache Iceberg tables on local filesystem (Parquet file format), Kafka topics for streaming  
 **Testing**: pytest (Python components), Flink test harness (stream processor), docker compose integration tests  
 **Target Platform**: macOS ARM64 (MacBook Air M1), Docker containers (linux/arm64)  
