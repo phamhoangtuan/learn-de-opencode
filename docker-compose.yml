@@ -1,0 +1,182 @@
+# Streaming Financial Transaction Pipeline
+# Docker Compose configuration for local development on MacBook Air M1
+# Total memory budget: ~3.4GB (well within 6GB limit)
+#
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose down           # Stop all services
+#   docker compose logs -f        # Follow all logs
+
+services:
+  # --- Message Broker ---
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: pipeline-kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      # KRaft mode (no ZooKeeper)
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # Listener configuration
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Performance tuning for M1
+      KAFKA_HEAP_OPTS: "-Xmx256m -Xms256m"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # Cluster ID for KRaft
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+    mem_limit: 512m
+    healthcheck:
+      test: /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - pipeline-network
+
+  # --- Topic Initialization ---
+  init-kafka:
+    image: apache/kafka:3.9.0
+    container_name: pipeline-init-kafka
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      echo 'Creating Kafka topics...'
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic raw-transactions --partitions 1 --replication-factor 1
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic alerts --partitions 1 --replication-factor 1
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic dead-letter --partitions 1 --replication-factor 1
+      echo 'Kafka topics created successfully.'
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --list
+      "
+    networks:
+      - pipeline-network
+
+  # --- Iceberg REST Catalog ---
+  iceberg-rest:
+    image: tabulario/iceberg-rest:latest
+    container_name: pipeline-iceberg-rest
+    ports:
+      - "8181:8181"
+    environment:
+      CATALOG_WAREHOUSE: /warehouse
+      CATALOG_IO__IMPL: org.apache.iceberg.io.ResolvingFileIO
+    volumes:
+      - iceberg-warehouse:/warehouse
+    mem_limit: 256m
+    healthcheck:
+      test: curl -f http://localhost:8181/v1/config > /dev/null 2>&1 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - pipeline-network
+
+  # --- Iceberg Table Initialization ---
+  init-iceberg:
+    build:
+      context: ./scripts
+      dockerfile: Dockerfile.init-iceberg
+    container_name: pipeline-init-iceberg
+    depends_on:
+      iceberg-rest:
+        condition: service_healthy
+    environment:
+      ICEBERG_REST_URI: http://iceberg-rest:8181
+    networks:
+      - pipeline-network
+
+  # --- Flink Job Manager ---
+  flink-jobmanager:
+    image: flink:1.20-java17
+    container_name: pipeline-flink-jobmanager
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        jobmanager.memory.process.size: 768m
+        state.backend.type: hashmap
+        state.checkpoints.dir: file:///checkpoints
+        execution.checkpointing.interval: 300000
+        execution.checkpointing.mode: EXACTLY_ONCE
+    volumes:
+      - flink-checkpoints:/checkpoints
+      - ./config/alerting-rules.yaml:/opt/flink/config/alerting-rules.yaml:ro
+    mem_limit: 768m
+    depends_on:
+      kafka:
+        condition: service_healthy
+      iceberg-rest:
+        condition: service_healthy
+    healthcheck:
+      test: curl -f http://localhost:8081/overview > /dev/null 2>&1 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - pipeline-network
+
+  # --- Flink Task Manager ---
+  flink-taskmanager:
+    image: flink:1.20-java17
+    container_name: pipeline-flink-taskmanager
+    command: taskmanager
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.memory.process.size: 1536m
+        taskmanager.numberOfTaskSlots: 2
+        state.backend.type: hashmap
+        state.checkpoints.dir: file:///checkpoints
+    volumes:
+      - flink-checkpoints:/checkpoints
+      - ./config/alerting-rules.yaml:/opt/flink/config/alerting-rules.yaml:ro
+    mem_limit: 1536m
+    depends_on:
+      - flink-jobmanager
+    networks:
+      - pipeline-network
+
+  # --- Data Generator ---
+  generator:
+    build:
+      context: ./generator
+      dockerfile: Dockerfile
+    container_name: pipeline-generator
+    volumes:
+      - ./config/generator.yaml:/app/config/generator.yaml:ro
+    environment:
+      CONFIG_PATH: /app/config/generator.yaml
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    mem_limit: 256m
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - pipeline-network
+
+networks:
+  pipeline-network:
+    driver: bridge
+
+volumes:
+  iceberg-warehouse:
+    driver: local
+  flink-checkpoints:
+    driver: local

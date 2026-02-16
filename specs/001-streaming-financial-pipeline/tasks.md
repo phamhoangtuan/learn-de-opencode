@@ -29,14 +29,14 @@
 
 **Purpose**: Project initialization, directory structure, build tooling, and base Docker Compose skeleton
 
-- [ ] T001 Create full project directory structure per plan.md (generator/, flink-jobs/, config/, scripts/, tests/ with all subdirectories and __init__.py files)
-- [ ] T002 [P] Initialize Python project: create generator/requirements.txt with confluent-kafka, faker, pyyaml, and generator/Dockerfile based on python:3.11-slim
-- [ ] T003 [P] Initialize Java Maven project: create flink-jobs/pom.xml with Flink 1.20, Iceberg connector (iceberg-flink-runtime-1.20-1.7.0), Jackson JSON dependencies
-- [ ] T004 [P] Create config/generator.yaml with default settings (rate: 10, fraud_percentage: 3, account_pool_size: 1000, currency weights, merchant category weights)
-- [ ] T005 [P] Create config/alerting-rules.yaml with 3 default rules (high-value-transaction threshold $10K, rapid-activity 5 tx/1 min, unusual-hour 01:00-05:00)
-- [ ] T006 [P] Configure Python testing framework: create tests/conftest.py with shared fixtures, add pytest and pytest-cov to dev dependencies
-- [ ] T007 [P] Configure Python linting: add ruff configuration (PEP 8 compliance per Constitution v2.0.0) in pyproject.toml or ruff.toml
-- [ ] T008 Create docker-compose.yml skeleton with all 5 services (kafka, iceberg-rest, flink-jobmanager, flink-taskmanager, generator), networks, volumes, memory limits per research.md R5, and dependency ordering
+- [x] T001 Create full project directory structure per plan.md (generator/, flink-jobs/, config/, scripts/, tests/ with all subdirectories and __init__.py files)
+- [x] T002 [P] Initialize Python project: create generator/requirements.txt with confluent-kafka, faker, pyyaml, and generator/Dockerfile based on python:3.11-slim
+- [x] T003 [P] Initialize Java Maven project: create flink-jobs/pom.xml with Flink 1.20, Iceberg connector (iceberg-flink-runtime-1.20-1.7.0), Jackson JSON dependencies
+- [x] T004 [P] Create config/generator.yaml with default settings (rate: 10, fraud_percentage: 3, account_pool_size: 1000, currency weights, merchant category weights)
+- [x] T005 [P] Create config/alerting-rules.yaml with 3 default rules (high-value-transaction threshold $10K, rapid-activity 5 tx/1 min, unusual-hour 01:00-05:00)
+- [x] T006 [P] Configure Python testing framework: create tests/conftest.py with shared fixtures, add pytest and pytest-cov to dev dependencies
+- [x] T007 [P] Configure Python linting: add ruff configuration (PEP 8 compliance per Constitution v2.0.0) in pyproject.toml or ruff.toml
+- [x] T008 Create docker-compose.yml skeleton with all 5 services (kafka, iceberg-rest, flink-jobmanager, flink-taskmanager, generator), networks, volumes, memory limits per research.md R5, and dependency ordering
 
 ---
 
@@ -46,15 +46,15 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T009 Configure Kafka service in docker-compose.yml: apache/kafka:3.9.0 KRaft mode, KAFKA_HEAP_OPTS -Xmx256m, mem_limit 512m, ports 9092/29092, healthcheck
-- [ ] T010 Configure Iceberg REST Catalog service in docker-compose.yml: tabulario/iceberg-rest, mem_limit 256m, port 8181, warehouse volume mount, healthcheck
-- [ ] T011 Configure Flink services in docker-compose.yml: flink:1.20-java17 for JobManager (768m) and TaskManager (1536m), checkpoint volume, depends_on kafka and iceberg-rest
-- [ ] T012 [P] Create Kafka topic initialization script or docker-compose entrypoint to create topics: raw-transactions (1 partition, RF 1), alerts (1 partition, RF 1), dead-letter (1 partition, RF 1)
-- [ ] T013 [P] Create Iceberg table initialization script scripts/init_iceberg.py using PyIceberg REST catalog client: create namespace `financial` and transactions table with schema from data-model.md (10 base + 3 enrichment fields), partitioned by days(timestamp), sort by transaction_id. Script must be idempotent (skip if table exists). Add pyiceberg to a scripts/requirements.txt.
-- [ ] T014 [P] Add alerts table creation to scripts/init_iceberg.py using PyIceberg REST catalog client: alerts table with schema from data-model.md (6 fields), partitioned by days(alert_timestamp). Idempotent (skip if table exists).
-- [ ] T015 [P] Add pipeline_session_metadata table creation to scripts/init_iceberg.py using PyIceberg REST catalog client: pipeline_session_metadata table with schema from data-model.md (13 fields), no partitioning. Idempotent (skip if table exists). Add an init-iceberg service to docker-compose.yml that runs this script after iceberg-rest is healthy, then exits.
-- [ ] T016 Configure structured JSON logging framework for Python generator in generator/src/lib/logging_config.py (log levels, correlation IDs, JSON format per Constitution v2.0.0 IV)
-- [ ] T017 [P] Create shared constants/enums file for Python: generator/src/models/enums.py with transaction_type, merchant_category, currency, status, severity enums matching contracts/
+- [x] T009 Configure Kafka service in docker-compose.yml: apache/kafka:3.9.0 KRaft mode, KAFKA_HEAP_OPTS -Xmx256m, mem_limit 512m, ports 9092/29092, healthcheck
+- [x] T010 Configure Iceberg REST Catalog service in docker-compose.yml: tabulario/iceberg-rest, mem_limit 256m, port 8181, warehouse volume mount, healthcheck
+- [x] T011 Configure Flink services in docker-compose.yml: flink:1.20-java17 for JobManager (768m) and TaskManager (1536m), checkpoint volume, depends_on kafka and iceberg-rest
+- [x] T012 [P] Create Kafka topic initialization script or docker-compose entrypoint to create topics: raw-transactions (1 partition, RF 1), alerts (1 partition, RF 1), dead-letter (1 partition, RF 1)
+- [x] T013 [P] Create Iceberg table initialization script scripts/init_iceberg.py using PyIceberg REST catalog client: create namespace `financial` and transactions table with schema from data-model.md (10 base + 3 enrichment fields), partitioned by days(timestamp), sort by transaction_id. Script must be idempotent (skip if table exists). Add pyiceberg to a scripts/requirements.txt.
+- [x] T014 [P] Add alerts table creation to scripts/init_iceberg.py using PyIceberg REST catalog client: alerts table with schema from data-model.md (6 fields), partitioned by days(alert_timestamp). Idempotent (skip if table exists).
+- [x] T015 [P] Add pipeline_session_metadata table creation to scripts/init_iceberg.py using PyIceberg REST catalog client: pipeline_session_metadata table with schema from data-model.md (13 fields), no partitioning. Idempotent (skip if table exists). Add an init-iceberg service to docker-compose.yml that runs this script after iceberg-rest is healthy, then exits.
+- [x] T016 Configure structured JSON logging framework for Python generator in generator/src/lib/logging_config.py (log levels, correlation IDs, JSON format per Constitution v2.0.0 IV)
+- [x] T017 [P] Create shared constants/enums file for Python: generator/src/models/enums.py with transaction_type, merchant_category, currency, status, severity enums matching contracts/
 
 **Checkpoint**: Foundation ready — Kafka broker running, Iceberg catalog with tables created, Flink cluster ready, topic creation automated. User story implementation can now begin.
 
