@@ -15,7 +15,7 @@
         <maven.compiler.target>17</maven.compiler.target>
         <flink.version>1.20.0</flink.version>
         <iceberg.version>1.7.0</iceberg.version>
-        <jackson.version>2.17.0</jackson.version>
+        <jackson.version>2.15.3</jackson.version>
     </properties>
 
     <dependencies>
@@ -106,6 +106,23 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
+                <configuration>
+                    <argLine>
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.lang.invoke=ALL-UNNAMED
+                        --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                        --add-opens java.base/java.io=ALL-UNNAMED
+                        --add-opens java.base/java.net=ALL-UNNAMED
+                        --add-opens java.base/java.nio=ALL-UNNAMED
+                        --add-opens java.base/java.util.concurrent=ALL-UNNAMED
+                        --add-opens java.base/java.util.concurrent.atomic=ALL-UNNAMED
+                        --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+                        --add-opens java.base/sun.nio.cs=ALL-UNNAMED
+                        --add-opens java.base/sun.security.ssl=ALL-UNNAMED
+                        --add-opens java.base/sun.security.util=ALL-UNNAMED
+                    </argLine>
+                </configuration>
             </plugin>
 
             <!-- Shade plugin for uber JAR -->

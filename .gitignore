@@ -28,6 +28,10 @@ flink-jobs/target/
 *.swp
 *.swo
 *~
+.classpath
+.project
+.settings/
+.factorypath
 
 # OS
 .DS_Store
