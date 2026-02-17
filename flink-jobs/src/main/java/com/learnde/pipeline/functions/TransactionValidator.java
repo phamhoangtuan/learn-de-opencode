@@ -273,8 +273,8 @@ public class TransactionValidator extends ProcessFunction<Transaction, Transacti
                     processorId);
 
             ctx.output(DLQ_TAG, dlr);
-            LOG.warn("Transaction validation failed: field={}, type={}, value={}",
-                    errorField, errorType, actualValue);
+            LOG.warn("Transaction routed to DLQ: txId={}, field={}, type={}, expected={}, actual={}",
+                    tx.getTransactionId(), errorField, errorType, expectedFormat, actualValue);
         } else {
             // Valid — enrich and emit
             tx.setProcessingTimestamp(Instant.now().toString());

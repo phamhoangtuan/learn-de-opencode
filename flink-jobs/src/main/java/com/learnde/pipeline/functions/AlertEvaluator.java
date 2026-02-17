@@ -80,8 +80,9 @@ public class AlertEvaluator extends KeyedProcessFunction<String, Transaction, Al
                 if (alert.isPresent()) {
                     out.collect(alert.get());
                     flagged = true;
-                    LOG.info("Alert generated: rule={}, txId={}", rule.getRuleName(),
-                            tx.getTransactionId());
+                    LOG.info("Alert generated: rule={}, severity={}, txId={}, accountId={}",
+                            rule.getRuleName(), rule.getSeverity(),
+                            tx.getTransactionId(), tx.getAccountId());
                 }
             }
         }
@@ -119,8 +120,10 @@ public class AlertEvaluator extends KeyedProcessFunction<String, Transaction, Al
             if (velocityAlert.isPresent()) {
                 out.collect(velocityAlert.get());
                 flagged = true;
-                LOG.info("Alert generated: rule=rapid-activity, txId={}, count={}",
-                        tx.getTransactionId(), validTimestamps.size());
+                LOG.info("Alert generated: rule=rapid-activity, severity={}, txId={}, accountId={}, count={}/{}",
+                        rapidActivityRule.getSeverity(), tx.getTransactionId(),
+                        tx.getAccountId(), validTimestamps.size(),
+                        rapidActivityRule.getMaxCount());
             }
         }
 

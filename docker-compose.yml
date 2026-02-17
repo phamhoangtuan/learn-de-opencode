@@ -101,7 +101,9 @@ services:
 
   # --- Flink Job Manager ---
   flink-jobmanager:
-    image: flink:1.20-java17
+    build:
+      context: ./flink-jobs
+      dockerfile: Dockerfile
     container_name: pipeline-flink-jobmanager
     ports:
       - "8081:8081"
@@ -134,7 +136,9 @@ services:
 
   # --- Flink Task Manager ---
   flink-taskmanager:
-    image: flink:1.20-java17
+    build:
+      context: ./flink-jobs
+      dockerfile: Dockerfile
     container_name: pipeline-flink-taskmanager
     command: taskmanager
     environment:
@@ -150,6 +154,40 @@ services:
     mem_limit: 1536m
     depends_on:
       - flink-jobmanager
+    networks:
+      - pipeline-network
+
+  # --- Flink Job Submission ---
+  # Submits the TransactionPipeline job after the Flink cluster is ready.
+  # Runs once and exits (restart: "no").
+  flink-job-submit:
+    build:
+      context: ./flink-jobs
+      dockerfile: Dockerfile
+    container_name: pipeline-flink-job-submit
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      echo 'Waiting for Flink JobManager to be ready...'
+      until curl -sf http://flink-jobmanager:8081/overview > /dev/null 2>&1; do
+        echo 'Flink JobManager not ready yet, retrying in 5s...'
+        sleep 5
+      done
+      echo 'Flink JobManager is ready. Submitting TransactionPipeline job...'
+      /opt/flink/bin/flink run \
+        --jobmanager flink-jobmanager:8081 \
+        /opt/flink/usrlib/pipeline.jar
+      echo 'Job submitted successfully.'
+      "
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+      flink-taskmanager:
+        condition: service_started
+      init-kafka:
+        condition: service_completed_successfully
+      init-iceberg:
+        condition: service_completed_successfully
     networks:
       - pipeline-network
 

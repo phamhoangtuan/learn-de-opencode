@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Log4j2 configuration for the Flink TransactionPipeline job.
+  Outputs structured JSON logs to stdout for container log aggregation.
+  
+  This file is placed in the classpath via the uber JAR or mounted volume.
+  Flink's own log4j config takes precedence for framework logs; this
+  config provides JSON layout for application-level logs.
+-->
+<Configuration status="WARN" monitorInterval="30">
+    <Appenders>
+        <!-- JSON structured log output to stdout -->
+        <Console name="JsonConsole" target="SYSTEM_OUT">
+            <JsonLayout compact="true" eventEol="true" stacktraceAsString="true"
+                        properties="true" includeTimeMillis="true">
+                <KeyValuePair key="service" value="flink-pipeline"/>
+                <KeyValuePair key="component" value="transaction-pipeline"/>
+            </JsonLayout>
+        </Console>
+
+        <!-- Fallback plain text console for development -->
+        <Console name="PlainConsole" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <!-- Pipeline application loggers — JSON output -->
+        <Logger name="com.learnde.pipeline" level="INFO" additivity="false">
+            <AppenderRef ref="JsonConsole"/>
+        </Logger>
+
+        <!-- Suppress noisy framework loggers -->
+        <Logger name="org.apache.flink" level="WARN" additivity="false">
+            <AppenderRef ref="PlainConsole"/>
+        </Logger>
+        <Logger name="org.apache.kafka" level="WARN" additivity="false">
+            <AppenderRef ref="PlainConsole"/>
+        </Logger>
+        <Logger name="org.apache.iceberg" level="WARN" additivity="false">
+            <AppenderRef ref="PlainConsole"/>
+        </Logger>
+        <Logger name="org.apache.hadoop" level="WARN" additivity="false">
+            <AppenderRef ref="PlainConsole"/>
+        </Logger>
+
+        <!-- Root logger -->
+        <Root level="INFO">
+            <AppenderRef ref="PlainConsole"/>
+        </Root>
+    </Loggers>
+</Configuration>
