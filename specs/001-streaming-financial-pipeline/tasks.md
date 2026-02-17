@@ -109,29 +109,29 @@
 
 > **CRITICAL: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T037 [P] [US2] Contract test: validate generated alerts against alerts.schema.json in tests/contract/test_alert_schema.py
-- [ ] T038 [P] [US2] Contract test: validate dead letter records against dead-letter.schema.json in tests/contract/test_dead_letter_schema.py
-- [ ] T039 [P] [US2] Java unit test: TransactionValidator schema validation (valid/invalid/missing fields) in flink-jobs/src/test/java/com/learnde/pipeline/functions/TransactionValidatorTest.java
-- [ ] T040 [P] [US2] Java unit test: AlertEvaluator rule evaluation with KeyedProcessFunction test harness in flink-jobs/src/test/java/com/learnde/pipeline/functions/AlertEvaluatorTest.java — MUST include test case for multi-rule triggering: a single transaction matching both HighValueRule and UnusualHourRule emits two independent alerts each referencing the same transaction_id (spec.md edge case line 105)
-- [ ] T041 [P] [US2] Java unit test: HighValueRule threshold detection in flink-jobs/src/test/java/com/learnde/pipeline/rules/HighValueRuleTest.java
-- [ ] T042 [P] [US2] Java unit test: RapidActivityRule velocity windowed detection in flink-jobs/src/test/java/com/learnde/pipeline/rules/RapidActivityRuleTest.java — MUST include test case for event-time semantics: send 5 transactions with event timestamps within 1 minute but arriving out of order (processing-time shuffled), verify alert triggers based on event-time window not processing-time (FR-015)
-- [ ] T043 [P] [US2] Java unit test: UnusualHourRule time-based detection in flink-jobs/src/test/java/com/learnde/pipeline/rules/UnusualHourRuleTest.java
+- [x] T037 [P] [US2] Contract test: validate generated alerts against alerts.schema.json in tests/contract/test_alert_schema.py
+- [x] T038 [P] [US2] Contract test: validate dead letter records against dead-letter.schema.json in tests/contract/test_dead_letter_schema.py
+- [x] T039 [P] [US2] Java unit test: TransactionValidator schema validation (valid/invalid/missing fields) in flink-jobs/src/test/java/com/learnde/pipeline/functions/TransactionValidatorTest.java
+- [x] T040 [P] [US2] Java unit test: AlertEvaluator rule evaluation with KeyedProcessFunction test harness in flink-jobs/src/test/java/com/learnde/pipeline/functions/AlertEvaluatorTest.java — MUST include test case for multi-rule triggering: a single transaction matching both HighValueRule and UnusualHourRule emits two independent alerts each referencing the same transaction_id (spec.md edge case line 105)
+- [x] T041 [P] [US2] Java unit test: HighValueRule threshold detection in flink-jobs/src/test/java/com/learnde/pipeline/rules/HighValueRuleTest.java
+- [x] T042 [P] [US2] Java unit test: RapidActivityRule velocity windowed detection in flink-jobs/src/test/java/com/learnde/pipeline/rules/RapidActivityRuleTest.java — MUST include test case for event-time semantics: send 5 transactions with event timestamps within 1 minute but arriving out of order (processing-time shuffled), verify alert triggers based on event-time window not processing-time (FR-015)
+- [x] T043 [P] [US2] Java unit test: UnusualHourRule time-based detection in flink-jobs/src/test/java/com/learnde/pipeline/rules/UnusualHourRuleTest.java
 - [ ] T044 [US2] Integration test: end-to-end pipeline flow (generator → Kafka → Flink → Iceberg + alerts) in tests/integration/test_pipeline_end_to_end.py
 
 ### Implementation for User Story 2
 
-- [ ] T045 [P] [US2] Create Transaction POJO with Jackson JSON annotations in flink-jobs/src/main/java/com/learnde/pipeline/models/Transaction.java
-- [ ] T046 [P] [US2] Create Alert POJO with Jackson JSON annotations in flink-jobs/src/main/java/com/learnde/pipeline/models/Alert.java
-- [ ] T047 [P] [US2] Create DeadLetterRecord POJO with Jackson JSON annotations in flink-jobs/src/main/java/com/learnde/pipeline/models/DeadLetterRecord.java
-- [ ] T048 [P] [US2] Implement TransactionDeserializer (JSON bytes → Transaction) with error handling in flink-jobs/src/main/java/com/learnde/pipeline/serialization/TransactionDeserializer.java
-- [ ] T049 [P] [US2] Implement AlertSerializer (Alert → JSON bytes) in flink-jobs/src/main/java/com/learnde/pipeline/serialization/AlertSerializer.java
-- [ ] T050 [US2] Implement TransactionValidator as ProcessFunction: validate all fields per data-model.md rules, split output to valid stream + DLQ side output in flink-jobs/src/main/java/com/learnde/pipeline/functions/TransactionValidator.java
-- [ ] T051 [P] [US2] Create AlertingRule interface with evaluate(Transaction) method in flink-jobs/src/main/java/com/learnde/pipeline/rules/AlertingRule.java
-- [ ] T052 [P] [US2] Implement HighValueRule (threshold check on amount) in flink-jobs/src/main/java/com/learnde/pipeline/rules/HighValueRule.java
-- [ ] T053 [P] [US2] Implement RapidActivityRule (velocity check using ValueState + event-time timer, 5 tx in 1 min window) in flink-jobs/src/main/java/com/learnde/pipeline/rules/RapidActivityRule.java
-- [ ] T054 [P] [US2] Implement UnusualHourRule (time-based check against configurable quiet hours) in flink-jobs/src/main/java/com/learnde/pipeline/rules/UnusualHourRule.java
+- [x] T045 [P] [US2] Create Transaction POJO with Jackson JSON annotations in flink-jobs/src/main/java/com/learnde/pipeline/models/Transaction.java
+- [x] T046 [P] [US2] Create Alert POJO with Jackson JSON annotations in flink-jobs/src/main/java/com/learnde/pipeline/models/Alert.java
+- [x] T047 [P] [US2] Create DeadLetterRecord POJO with Jackson JSON annotations in flink-jobs/src/main/java/com/learnde/pipeline/models/DeadLetterRecord.java
+- [x] T048 [P] [US2] Implement TransactionDeserializer (JSON bytes → Transaction) with error handling in flink-jobs/src/main/java/com/learnde/pipeline/serialization/TransactionDeserializer.java
+- [x] T049 [P] [US2] Implement AlertSerializer (Alert → JSON bytes) in flink-jobs/src/main/java/com/learnde/pipeline/serialization/AlertSerializer.java
+- [x] T050 [US2] Implement TransactionValidator as ProcessFunction: validate all fields per data-model.md rules, split output to valid stream + DLQ side output in flink-jobs/src/main/java/com/learnde/pipeline/functions/TransactionValidator.java
+- [x] T051 [P] [US2] Create AlertingRule interface with evaluate(Transaction) method in flink-jobs/src/main/java/com/learnde/pipeline/rules/AlertingRule.java
+- [x] T052 [P] [US2] Implement HighValueRule (threshold check on amount) in flink-jobs/src/main/java/com/learnde/pipeline/rules/HighValueRule.java
+- [x] T053 [P] [US2] Implement RapidActivityRule (velocity check using ValueState + event-time timer, 5 tx in 1 min window) in flink-jobs/src/main/java/com/learnde/pipeline/rules/RapidActivityRule.java
+- [x] T054 [P] [US2] Implement UnusualHourRule (time-based check against configurable quiet hours) in flink-jobs/src/main/java/com/learnde/pipeline/rules/UnusualHourRule.java
 - [ ] T055 [US2] Implement RuleConfigLoader to load alerting rules from YAML config with hot-reload support in flink-jobs/src/main/java/com/learnde/pipeline/rules/RuleConfigLoader.java
-- [ ] T056 [US2] Implement AlertEvaluator as KeyedProcessFunction: evaluate transaction against all enabled rules, emit alerts per matching rule, set is_flagged on transaction in flink-jobs/src/main/java/com/learnde/pipeline/functions/AlertEvaluator.java
+- [x] T056 [US2] Implement AlertEvaluator as KeyedProcessFunction: evaluate transaction against all enabled rules, emit alerts per matching rule, set is_flagged on transaction in flink-jobs/src/main/java/com/learnde/pipeline/functions/AlertEvaluator.java
 - [ ] T057 [US2] Implement IcebergSinkBuilder: configure Iceberg table writer for transactions and alerts tables (Parquet, ZSTD, 128MB target file size, checkpoint interval 5-10 min) in flink-jobs/src/main/java/com/learnde/pipeline/functions/IcebergSinkBuilder.java
 - [ ] T058 [US2] Implement TransactionPipeline main job: wire Kafka source → deserialize → validate → split (valid/DLQ) → alert evaluate → Iceberg sinks + Kafka alert sink in flink-jobs/src/main/java/com/learnde/pipeline/TransactionPipeline.java
 - [ ] T059 [US2] Create Flink job Dockerfile or configure Flink containers to build and submit TransactionPipeline JAR on startup, mount config/alerting-rules.yaml as volume
