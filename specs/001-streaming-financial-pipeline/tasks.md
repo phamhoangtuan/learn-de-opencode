@@ -151,18 +151,18 @@
 
 > **CRITICAL: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T061 [P] [US3] Unit test: query.py CLI argument parsing and query construction in tests/unit/test_query_script.py
-- [ ] T062 [P] [US3] Integration test: DuckDB/PyIceberg reads transactions from Iceberg REST catalog in tests/integration/test_iceberg_queries.py
-- [ ] T063 [US3] Integration test: time-travel query returns historical snapshot data in tests/integration/test_iceberg_queries.py
+- [x] T061 [P] [US3] Unit test: query.py CLI argument parsing and query construction in tests/unit/test_query_script.py
+- [x] T062 [P] [US3] Integration test: DuckDB/PyIceberg reads transactions from Iceberg REST catalog in tests/integration/test_iceberg_queries.py
+- [x] T063 [US3] Integration test: time-travel query returns historical snapshot data in tests/integration/test_iceberg_queries.py
 
 ### Implementation for User Story 3
 
-- [ ] T064 [US3] Implement scripts/query.py: DuckDB + PyIceberg analytics CLI with subcommands (--table transactions/alerts, --limit, --date-range, --account-id, --show-alerts, --join-alerts)
-- [ ] T065 [US3] Add time-travel query support to scripts/query.py: --snapshot-id and --as-of-timestamp flags using PyIceberg snapshot resolution
-- [ ] T066 [US3] Add schema evolution demonstration: script or documentation showing how to add a new column to the transactions Iceberg table without rewriting existing data
-- [ ] T067 [US3] Implement session metadata capture: write pipeline_session_metadata records to Iceberg table (session_id, start/end timestamps, record counts, latency percentiles) from generator or a lightweight aggregator
-- [ ] T068 [US3] Implement compaction script: daily rewrite_data_files, expire snapshots older than 3 days (keep min 10), remove orphan files (weekly) using PyIceberg API
-- [ ] T069 [US3] Add structured logging for analytics queries (query type, execution time, row count returned) in scripts/query.py
+- [x] T064 [US3] Implement scripts/query.py: DuckDB + PyIceberg analytics CLI with subcommands (--table transactions/alerts, --limit, --date-range, --account-id, --show-alerts, --join-alerts)
+- [x] T065 [US3] Add time-travel query support to scripts/query.py: --snapshot-id and --as-of-timestamp flags using PyIceberg snapshot resolution
+- [x] T066 [US3] Add schema evolution demonstration: script or documentation showing how to add a new column to the transactions Iceberg table without rewriting existing data
+- [x] T067 [US3] Implement session metadata capture: write pipeline_session_metadata records to Iceberg table (session_id, start/end timestamps, record counts, latency percentiles) from generator or a lightweight aggregator
+- [x] T068 [US3] Implement compaction script: daily rewrite_data_files, expire snapshots older than 3 days (keep min 10), remove orphan files (weekly) using PyIceberg API
+- [x] T069 [US3] Add structured logging for analytics queries (query type, execution time, row count returned) in scripts/query.py
 
 **Checkpoint**: US3 complete — Analysts can query stored transactions and alerts via DuckDB/PyIceberg CLI. Time-travel, schema evolution, and compaction all functional.
 
