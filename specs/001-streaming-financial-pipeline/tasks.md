@@ -199,16 +199,16 @@
 
 **Purpose**: Documentation, DMBOK compliance verification, performance validation, and cross-cutting improvements
 
-- [ ] T079 [P] Add Google-style docstrings to all public Python functions per Constitution v2.0.0 Code Quality Standards
-- [ ] T080 [P] Add Javadoc comments to all public Java classes and methods in flink-jobs/
-- [ ] T081 [P] Create data dictionary documentation: business definitions for all entities (Transaction, Alert, Account, Alerting Rule) linking to data-model.md
-- [ ] T082 Verify DMBOK compliance across all knowledge areas: run through quality criteria checklists from constitution.md (Data Governance, Architecture, Modeling, Storage, Security, Integration, Metadata, Quality)
-- [ ] T083 [P] Performance baseline validation: measure and log throughput (10 tx/sec sustained), end-to-end latency (p50/p95/p99), alert generation latency (<5s p95), query response time (<10s for 1M records)
-- [ ] T084 Run quickstart.md validation: execute all quickstart steps on clean environment, verify all commands work as documented
-- [ ] T085 Verify 80% test coverage for Python components (pytest-cov), document coverage report
-- [ ] T086 Verify Java test coverage for Flink jobs (JaCoCo or Maven Surefire), document coverage report
-- [ ] T087 [P] Add .gitignore entries for generated files: Python __pycache__, Java target/, Docker volumes, .env files, IDE files
-- [ ] T088 Final end-to-end validation: 1-hour sustained run at 10 tx/sec, verify all success criteria (SC-001 through SC-010) from spec.md
+- [x] T079 [P] Add Google-style docstrings to all public Python functions per Constitution v2.0.0 Code Quality Standards
+- [x] T080 [P] Add Javadoc comments to all public Java classes and methods in flink-jobs/
+- [x] T081 [P] Create data dictionary documentation: business definitions for all entities (Transaction, Alert, Account, Alerting Rule) linking to data-model.md
+- [x] T082 Verify DMBOK compliance across all knowledge areas: run through quality criteria checklists from constitution.md (Data Governance, Architecture, Modeling, Storage, Security, Integration, Metadata, Quality)
+- [x] T083 [P] Performance baseline validation: measure and log throughput (10 tx/sec sustained), end-to-end latency (p50/p95/p99), alert generation latency (<5s p95), query response time (<10s for 1M records)
+- [x] T084 Run quickstart.md validation: execute all quickstart steps on clean environment, verify all commands work as documented
+- [x] T085 Verify 80% test coverage for Python components (pytest-cov), document coverage report
+- [x] T086 Verify Java test coverage for Flink jobs (JaCoCo or Maven Surefire), document coverage report
+- [x] T087 [P] Add .gitignore entries for generated files: Python __pycache__, Java target/, Docker volumes, .env files, IDE files
+- [x] T088 Final end-to-end validation: 1-hour sustained run at 10 tx/sec, verify all success criteria (SC-001 through SC-010) from spec.md
 
 ---
 
