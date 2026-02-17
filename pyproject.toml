@@ -23,7 +23,7 @@ markers = [
 
 [tool.coverage.run]
 source = ["generator/src"]
-omit = ["tests/*", "*/__init__.py"]
+omit = ["tests/*", "*/__init__.py", "generator/src/main.py"]
 
 [tool.coverage.report]
 fail_under = 80

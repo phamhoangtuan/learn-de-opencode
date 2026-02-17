@@ -72,28 +72,28 @@
 > Per Constitution v2.0.0 Principle III: Test-First Development is NON-NEGOTIABLE
 > Target: 80% minimum test coverage
 
-- [ ] T018 [P] [US1] Contract test: validate generated transactions against raw-transactions.schema.json in tests/contract/test_raw_transaction_schema.py
-- [ ] T019 [P] [US1] Unit test: Account model pool generation and sampling in tests/unit/test_account_model.py
-- [ ] T020 [P] [US1] Unit test: Transaction model dataclass creation and JSON serialization in tests/unit/test_transaction_model.py
-- [ ] T021 [P] [US1] Unit test: transaction_generator realistic distributions (amounts, types, categories) in tests/unit/test_transaction_generator.py
-- [ ] T022 [P] [US1] Unit test: fraud_injector anomalous pattern injection at configurable percentage in tests/unit/test_fraud_injector.py
-- [ ] T023 [P] [US1] Unit test: rate_limiter token bucket algorithm (rate enforcement, burst handling, rate changes) in tests/unit/test_rate_limiter.py
-- [ ] T024 [P] [US1] Unit test: config_loader YAML loading, watch/reload, validation in tests/unit/test_config_loader.py
-- [ ] T025 [P] [US1] Unit test: Kafka producer wrapper with circuit breaker, delivery callbacks, buffer drain in tests/unit/test_producer.py
-- [ ] T026 [US1] Integration test: generator produces valid messages to Kafka topic end-to-end in tests/integration/test_generator_to_kafka.py
+- [x] T018 [P] [US1] Contract test: validate generated transactions against raw-transactions.schema.json in tests/contract/test_raw_transaction_schema.py
+- [x] T019 [P] [US1] Unit test: Account model pool generation and sampling in tests/unit/test_account_model.py
+- [x] T020 [P] [US1] Unit test: Transaction model dataclass creation and JSON serialization in tests/unit/test_transaction_model.py
+- [x] T021 [P] [US1] Unit test: transaction_generator realistic distributions (amounts, types, categories) in tests/unit/test_transaction_generator.py
+- [x] T022 [P] [US1] Unit test: fraud_injector anomalous pattern injection at configurable percentage in tests/unit/test_fraud_injector.py
+- [x] T023 [P] [US1] Unit test: rate_limiter token bucket algorithm (rate enforcement, burst handling, rate changes) in tests/unit/test_rate_limiter.py
+- [x] T024 [P] [US1] Unit test: config_loader YAML loading, watch/reload, validation in tests/unit/test_config_loader.py
+- [x] T025 [P] [US1] Unit test: Kafka producer wrapper with circuit breaker, delivery callbacks, buffer drain in tests/unit/test_producer.py
+- [x] T026 [US1] Integration test: generator produces valid messages to Kafka topic end-to-end in tests/integration/test_generator_to_kafka.py
 
 ### Implementation for User Story 1
 
-- [ ] T027 [P] [US1] Create Account model with pool management (~1000 accounts) in generator/src/models/account.py
-- [ ] T028 [P] [US1] Create Transaction dataclass with JSON serialization and validation in generator/src/models/transaction.py
-- [ ] T029 [US1] Implement transaction_generator with realistic distributions (log-normal amounts, weighted types/categories, account sampling) in generator/src/generators/transaction_generator.py
-- [ ] T030 [US1] Implement fraud_injector with configurable anomalous pattern injection (high amounts, rapid activity, unusual hours) in generator/src/generators/fraud_injector.py
-- [ ] T031 [P] [US1] Implement rate_limiter token bucket algorithm with time.monotonic() in generator/src/lib/rate_limiter.py
-- [ ] T032 [P] [US1] Implement config_loader with YAML loading, 5-second file watch, and hot reload in generator/src/lib/config_loader.py
-- [ ] T033 [US1] Implement Kafka producer wrapper with confluent-kafka, delivery callbacks, circuit breaker (10 consecutive failures), deque buffer (max 10K), exponential backoff in generator/src/kafka/producer.py
-- [ ] T034 [US1] Implement main.py entry point: initialize account pool, start config watch, token bucket loop (generate → serialize → produce → poll) in generator/src/main.py
-- [ ] T035 [US1] Add structured JSON logging throughout generator modules per Constitution v2.0.0 Principle IV (startup, rate changes, delivery stats, errors)
-- [ ] T036 [US1] Configure generator service in docker-compose.yml: custom Dockerfile build, depends_on kafka, volume mount for config/generator.yaml, mem_limit 256m
+- [x] T027 [P] [US1] Create Account model with pool management (~1000 accounts) in generator/src/models/account.py
+- [x] T028 [P] [US1] Create Transaction dataclass with JSON serialization and validation in generator/src/models/transaction.py
+- [x] T029 [US1] Implement transaction_generator with realistic distributions (log-normal amounts, weighted types/categories, account sampling) in generator/src/generators/transaction_generator.py
+- [x] T030 [US1] Implement fraud_injector with configurable anomalous pattern injection (high amounts, rapid activity, unusual hours) in generator/src/generators/fraud_injector.py
+- [x] T031 [P] [US1] Implement rate_limiter token bucket algorithm with time.monotonic() in generator/src/lib/rate_limiter.py
+- [x] T032 [P] [US1] Implement config_loader with YAML loading, 5-second file watch, and hot reload in generator/src/lib/config_loader.py
+- [x] T033 [US1] Implement Kafka producer wrapper with confluent-kafka, delivery callbacks, circuit breaker (10 consecutive failures), deque buffer (max 10K), exponential backoff in generator/src/kafka/producer.py
+- [x] T034 [US1] Implement main.py entry point: initialize account pool, start config watch, token bucket loop (generate → serialize → produce → poll) in generator/src/main.py
+- [x] T035 [US1] Add structured JSON logging throughout generator modules per Constitution v2.0.0 Principle IV (startup, rate changes, delivery stats, errors)
+- [x] T036 [US1] Configure generator service in docker-compose.yml: custom Dockerfile build, depends_on kafka, volume mount for config/generator.yaml, mem_limit 256m
 
 **Checkpoint**: US1 complete — Generator produces valid transactions to Kafka at configurable rate. Can be tested independently by running `docker compose up kafka generator` and consuming from raw-transactions topic.
 
