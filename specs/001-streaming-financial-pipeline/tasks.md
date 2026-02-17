@@ -116,7 +116,7 @@
 - [x] T041 [P] [US2] Java unit test: HighValueRule threshold detection in flink-jobs/src/test/java/com/learnde/pipeline/rules/HighValueRuleTest.java
 - [x] T042 [P] [US2] Java unit test: RapidActivityRule velocity windowed detection in flink-jobs/src/test/java/com/learnde/pipeline/rules/RapidActivityRuleTest.java — MUST include test case for event-time semantics: send 5 transactions with event timestamps within 1 minute but arriving out of order (processing-time shuffled), verify alert triggers based on event-time window not processing-time (FR-015)
 - [x] T043 [P] [US2] Java unit test: UnusualHourRule time-based detection in flink-jobs/src/test/java/com/learnde/pipeline/rules/UnusualHourRuleTest.java
-- [ ] T044 [US2] Integration test: end-to-end pipeline flow (generator → Kafka → Flink → Iceberg + alerts) in tests/integration/test_pipeline_end_to_end.py
+- [x] T044 [US2] Integration test: end-to-end pipeline flow (generator → Kafka → Flink → Iceberg + alerts) in tests/integration/test_pipeline_end_to_end.py
 
 ### Implementation for User Story 2
 
@@ -130,12 +130,12 @@
 - [x] T052 [P] [US2] Implement HighValueRule (threshold check on amount) in flink-jobs/src/main/java/com/learnde/pipeline/rules/HighValueRule.java
 - [x] T053 [P] [US2] Implement RapidActivityRule (velocity check using ValueState + event-time timer, 5 tx in 1 min window) in flink-jobs/src/main/java/com/learnde/pipeline/rules/RapidActivityRule.java
 - [x] T054 [P] [US2] Implement UnusualHourRule (time-based check against configurable quiet hours) in flink-jobs/src/main/java/com/learnde/pipeline/rules/UnusualHourRule.java
-- [ ] T055 [US2] Implement RuleConfigLoader to load alerting rules from YAML config with hot-reload support in flink-jobs/src/main/java/com/learnde/pipeline/rules/RuleConfigLoader.java
+- [x] T055 [US2] Implement RuleConfigLoader to load alerting rules from YAML config with hot-reload support in flink-jobs/src/main/java/com/learnde/pipeline/rules/RuleConfigLoader.java
 - [x] T056 [US2] Implement AlertEvaluator as KeyedProcessFunction: evaluate transaction against all enabled rules, emit alerts per matching rule, set is_flagged on transaction in flink-jobs/src/main/java/com/learnde/pipeline/functions/AlertEvaluator.java
-- [ ] T057 [US2] Implement IcebergSinkBuilder: configure Iceberg table writer for transactions and alerts tables (Parquet, ZSTD, 128MB target file size, checkpoint interval 5-10 min) in flink-jobs/src/main/java/com/learnde/pipeline/functions/IcebergSinkBuilder.java
-- [ ] T058 [US2] Implement TransactionPipeline main job: wire Kafka source → deserialize → validate → split (valid/DLQ) → alert evaluate → Iceberg sinks + Kafka alert sink in flink-jobs/src/main/java/com/learnde/pipeline/TransactionPipeline.java
-- [ ] T059 [US2] Create Flink job Dockerfile or configure Flink containers to build and submit TransactionPipeline JAR on startup, mount config/alerting-rules.yaml as volume
-- [ ] T060 [US2] Add structured logging throughout Flink job (SLF4J + JSON layout): validation failures, alerts generated, DLQ routing, checkpoint completions
+- [x] T057 [US2] Implement IcebergSinkBuilder: configure Iceberg table writer for transactions and alerts tables (Parquet, ZSTD, 128MB target file size, checkpoint interval 5-10 min) in flink-jobs/src/main/java/com/learnde/pipeline/functions/IcebergSinkBuilder.java
+- [x] T058 [US2] Implement TransactionPipeline main job: wire Kafka source → deserialize → validate → split (valid/DLQ) → alert evaluate → Iceberg sinks + Kafka alert sink in flink-jobs/src/main/java/com/learnde/pipeline/TransactionPipeline.java
+- [x] T059 [US2] Create Flink job Dockerfile or configure Flink containers to build and submit TransactionPipeline JAR on startup, mount config/alerting-rules.yaml as volume
+- [x] T060 [US2] Add structured logging throughout Flink job (SLF4J + JSON layout): validation failures, alerts generated, DLQ routing, checkpoint completions
 
 **Checkpoint**: US2 complete — Flink processes transactions in real time, generates alerts for suspicious patterns within 5 seconds, routes invalid records to DLQ, writes to Iceberg. Test with known fraud patterns.
 
