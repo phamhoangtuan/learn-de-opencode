@@ -1,0 +1,30 @@
+# Alerting Rules Configuration
+# Loaded by Flink stream processor at startup and reloaded on change (FR-016)
+# Each rule evaluates incoming transactions and generates alerts when conditions are met
+
+rules:
+  - rule_name: "high-value-transaction"
+    rule_type: "threshold"
+    parameters:
+      amount_threshold: "10000"
+    severity: "high"
+    enabled: true
+    description: "Flags transactions with amount exceeding the configured threshold"
+
+  - rule_name: "rapid-activity"
+    rule_type: "velocity"
+    parameters:
+      max_count: "5"
+      window_minutes: "1"
+    severity: "medium"
+    enabled: true
+    description: "Flags accounts with excessive transaction frequency within a time window"
+
+  - rule_name: "unusual-hour"
+    rule_type: "time_based"
+    parameters:
+      quiet_start: "01:00"
+      quiet_end: "05:00"
+    severity: "low"
+    enabled: true
+    description: "Flags transactions occurring during unusual hours (quiet period)"

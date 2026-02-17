@@ -1,0 +1,20 @@
+# Docker build context exclusions
+.git/
+.gitignore
+.dockerignore
+*.md
+specs/
+tests/
+.specify/
+.opencode/
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+.env
+.env.*
+*.log
+flink-jobs/target/

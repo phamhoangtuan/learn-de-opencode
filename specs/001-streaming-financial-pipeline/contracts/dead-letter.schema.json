@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://learn-de.local/schemas/dead-letter/v1.0.0",
+  "title": "Dead Letter Record",
+  "description": "Record routed to the Kafka dead-letter topic when a transaction fails validation in the Flink stream processor. Contains the original record and error details for debugging and reprocessing.",
+  "type": "object",
+  "required": [
+    "original_record",
+    "error_field",
+    "error_type",
+    "expected_format",
+    "actual_value",
+    "error_timestamp",
+    "processor_id"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "original_record": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Raw JSON string of the failed transaction record, preserved as-is for inspection and potential reprocessing",
+      "examples": ["{\"transaction_id\":\"abc\",\"amount\":0,\"currency\":\"XYZ\"}"]
+    },
+    "error_field": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The field name that caused the validation failure",
+      "examples": ["amount", "currency", "timestamp", "transaction_id"]
+    },
+    "error_type": {
+      "type": "string",
+      "enum": ["missing", "invalid_format", "out_of_range", "invalid_enum", "duplicate", "invalid_state_transition"],
+      "description": "Category of the validation failure"
+    },
+    "expected_format": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Description of the expected format or value",
+      "examples": [
+        "UUID v4 format",
+        "ISO 8601 datetime with timezone",
+        "non-zero decimal in range [-50000, 50000]",
+        "one of: USD, EUR, GBP, JPY",
+        "one of: purchase, withdrawal, transfer, refund"
+      ]
+    },
+    "actual_value": {
+      "type": ["string", "null"],
+      "description": "The actual value that failed validation, or null if the field was missing",
+      "examples": ["0", "XYZ", "not-a-date", null]
+    },
+    "error_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the error was detected by Flink",
+      "examples": ["2026-02-16T14:30:01.200Z"]
+    },
+    "processor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Identifier of the Flink subtask (operator name + subtask index) that detected the error",
+      "examples": ["transaction-validator-0", "transaction-validator-1"]
+    }
+  }
+}
