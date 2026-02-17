@@ -46,7 +46,14 @@ TABLE_NAME = "pipeline_session_metadata"
 
 
 def get_catalog(uri: str) -> RestCatalog:
-    """Create and return a PyIceberg REST catalog client."""
+    """Create and return a PyIceberg REST catalog client.
+
+    Args:
+        uri: Iceberg REST catalog URI.
+
+    Returns:
+        Configured RestCatalog instance.
+    """
     return RestCatalog(
         name="rest",
         **{"uri": uri, "s3.endpoint": DEFAULT_S3_ENDPOINT},
@@ -220,7 +227,14 @@ def list_sessions(catalog_uri: str) -> None:
 
 
 def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
-    """Parse CLI arguments for session metadata management."""
+    """Parse CLI arguments for session metadata management.
+
+    Args:
+        argv: Command-line arguments (defaults to sys.argv).
+
+    Returns:
+        Parsed argument namespace with subcommand and session parameters.
+    """
     parser = argparse.ArgumentParser(
         description="Manage pipeline session metadata in Iceberg"
     )

@@ -47,7 +47,9 @@ public class IcebergSinkBuilder implements Serializable {
     private static final long serialVersionUID = 1L;
     private static final Logger LOG = LoggerFactory.getLogger(IcebergSinkBuilder.class);
 
+    /** Fully qualified Iceberg table name for transactions. */
     public static final String TRANSACTIONS_TABLE = "financial.transactions";
+    /** Fully qualified Iceberg table name for alerts. */
     public static final String ALERTS_TABLE = "financial.alerts";
 
     private static final String CATALOG_NAME = "rest";

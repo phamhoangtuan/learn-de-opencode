@@ -33,7 +33,14 @@ DEMO_COLUMN_NAME = "risk_score_category"
 
 
 def get_catalog(uri: str) -> RestCatalog:
-    """Create and return a PyIceberg REST catalog client."""
+    """Create and return a PyIceberg REST catalog client.
+
+    Args:
+        uri: Iceberg REST catalog URI.
+
+    Returns:
+        Configured RestCatalog instance.
+    """
     return RestCatalog(
         name="rest",
         **{"uri": uri, "s3.endpoint": DEFAULT_S3_ENDPOINT},

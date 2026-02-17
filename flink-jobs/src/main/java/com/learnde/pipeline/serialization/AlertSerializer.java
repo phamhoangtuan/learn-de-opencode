@@ -20,11 +20,13 @@ public class AlertSerializer implements SerializationSchema<Alert> {
 
     private transient ObjectMapper objectMapper;
 
+    /** {@inheritDoc} Initializes the Jackson ObjectMapper for JSON serialization. */
     @Override
     public void open(InitializationContext context) {
         this.objectMapper = new ObjectMapper();
     }
 
+    /** {@inheritDoc} Serializes an Alert to JSON bytes. */
     @Override
     public byte[] serialize(Alert alert) {
         if (objectMapper == null) {

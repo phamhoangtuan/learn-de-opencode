@@ -25,6 +25,7 @@ public class UnusualHourRule implements AlertingRule {
     private final String severity;
     private final boolean enabled;
 
+    /** Constructs an UnusualHourRule. @param quietStart start of quiet hours @param quietEnd end of quiet hours @param severity alert severity level @param enabled whether this rule is active */
     public UnusualHourRule(LocalTime quietStart, LocalTime quietEnd,
                            String severity, boolean enabled) {
         this.quietStart = quietStart;
@@ -38,29 +39,35 @@ public class UnusualHourRule implements AlertingRule {
         this(LocalTime.of(1, 0), LocalTime.of(5, 0), "low", true);
     }
 
+    /** {@inheritDoc} */
     @Override
     public String getRuleName() {
         return "unusual-hour";
     }
 
+    /** {@inheritDoc} */
     @Override
     public String getSeverity() {
         return severity;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isEnabled() {
         return enabled;
     }
 
+    /** @return start time of the quiet hours period */
     public LocalTime getQuietStart() {
         return quietStart;
     }
 
+    /** @return end time of the quiet hours period */
     public LocalTime getQuietEnd() {
         return quietEnd;
     }
 
+    /** {@inheritDoc} */
     @Override
     public Optional<Alert> evaluate(Transaction transaction) {
         if (!enabled || transaction.getTimestamp() == null) {

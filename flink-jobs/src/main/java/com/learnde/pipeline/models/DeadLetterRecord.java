@@ -57,62 +57,77 @@ public class DeadLetterRecord implements Serializable {
 
     // --- Getters and Setters ---
 
+    /** @return the originalRecord */
     public String getOriginalRecord() {
         return originalRecord;
     }
 
+    /** @param originalRecord the originalRecord to set */
     public void setOriginalRecord(String originalRecord) {
         this.originalRecord = originalRecord;
     }
 
+    /** @return the errorField */
     public String getErrorField() {
         return errorField;
     }
 
+    /** @param errorField the errorField to set */
     public void setErrorField(String errorField) {
         this.errorField = errorField;
     }
 
+    /** @return the errorType */
     public String getErrorType() {
         return errorType;
     }
 
+    /** @param errorType the errorType to set */
     public void setErrorType(String errorType) {
         this.errorType = errorType;
     }
 
+    /** @return the expectedFormat */
     public String getExpectedFormat() {
         return expectedFormat;
     }
 
+    /** @param expectedFormat the expectedFormat to set */
     public void setExpectedFormat(String expectedFormat) {
         this.expectedFormat = expectedFormat;
     }
 
+    /** @return the actualValue */
     public String getActualValue() {
         return actualValue;
     }
 
+    /** @param actualValue the actualValue to set */
     public void setActualValue(String actualValue) {
         this.actualValue = actualValue;
     }
 
+    /** @return the errorTimestamp */
     public String getErrorTimestamp() {
         return errorTimestamp;
     }
 
+    /** @param errorTimestamp the errorTimestamp to set */
     public void setErrorTimestamp(String errorTimestamp) {
         this.errorTimestamp = errorTimestamp;
     }
 
+    /** @return the processorId */
     public String getProcessorId() {
         return processorId;
     }
 
+    /** @param processorId the processorId to set */
     public void setProcessorId(String processorId) {
         this.processorId = processorId;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -123,11 +138,13 @@ public class DeadLetterRecord implements Serializable {
                 && Objects.equals(errorTimestamp, that.errorTimestamp);
     }
 
+    /** {@inheritDoc} */
     @Override
     public int hashCode() {
         return Objects.hash(originalRecord, errorField, errorTimestamp);
     }
 
+    /** {@inheritDoc} */
     @Override
     public String toString() {
         return "DeadLetterRecord{"

@@ -53,54 +53,67 @@ public class Alert implements Serializable {
 
     // --- Getters and Setters ---
 
+    /** @return the alertId */
     public String getAlertId() {
         return alertId;
     }
 
+    /** @param alertId the alertId to set */
     public void setAlertId(String alertId) {
         this.alertId = alertId;
     }
 
+    /** @return the transactionId */
     public String getTransactionId() {
         return transactionId;
     }
 
+    /** @param transactionId the transactionId to set */
     public void setTransactionId(String transactionId) {
         this.transactionId = transactionId;
     }
 
+    /** @return the ruleName */
     public String getRuleName() {
         return ruleName;
     }
 
+    /** @param ruleName the ruleName to set */
     public void setRuleName(String ruleName) {
         this.ruleName = ruleName;
     }
 
+    /** @return the severity */
     public String getSeverity() {
         return severity;
     }
 
+    /** @param severity the severity to set */
     public void setSeverity(String severity) {
         this.severity = severity;
     }
 
+    /** @return the alertTimestamp */
     public String getAlertTimestamp() {
         return alertTimestamp;
     }
 
+    /** @param alertTimestamp the alertTimestamp to set */
     public void setAlertTimestamp(String alertTimestamp) {
         this.alertTimestamp = alertTimestamp;
     }
 
+    /** @return the description */
     public String getDescription() {
         return description;
     }
 
+    /** @param description the description to set */
     public void setDescription(String description) {
         this.description = description;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -109,11 +122,13 @@ public class Alert implements Serializable {
         return Objects.equals(alertId, alert.alertId);
     }
 
+    /** {@inheritDoc} */
     @Override
     public int hashCode() {
         return Objects.hash(alertId);
     }
 
+    /** {@inheritDoc} */
     @Override
     public String toString() {
         return "Alert{"

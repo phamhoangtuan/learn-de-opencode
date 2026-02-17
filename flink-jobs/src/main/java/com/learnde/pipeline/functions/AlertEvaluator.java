@@ -51,6 +51,7 @@ public class AlertEvaluator extends KeyedProcessFunction<String, Transaction, Al
     public static final org.apache.flink.util.OutputTag<Transaction> ENRICHED_TX_TAG =
             new org.apache.flink.util.OutputTag<Transaction>("enriched-transactions") {};
 
+    /** Constructs an AlertEvaluator with the given rules. @param statelessRules list of stateless alerting rules @param rapidActivityRule the rapid activity rule (stateful, uses Flink state) */
     public AlertEvaluator(List<AlertingRule> statelessRules, RapidActivityRule rapidActivityRule) {
         this.statelessRules = statelessRules;
         this.rapidActivityRule = rapidActivityRule;
@@ -62,6 +63,7 @@ public class AlertEvaluator extends KeyedProcessFunction<String, Transaction, Al
         this.rapidActivityRule = new RapidActivityRule();
     }
 
+    /** {@inheritDoc} Initializes Flink ValueState for rapid-activity tracking and loads rules from config. */
     @Override
     public void open(Configuration parameters) throws Exception {
         ListStateDescriptor<Long> descriptor = new ListStateDescriptor<>(
@@ -69,6 +71,7 @@ public class AlertEvaluator extends KeyedProcessFunction<String, Transaction, Al
         txTimestamps = getRuntimeContext().getListState(descriptor);
     }
 
+    /** {@inheritDoc} Evaluates each transaction against all enabled rules, emitting alerts for matches. */
     @Override
     public void processElement(Transaction tx, Context ctx, Collector<Alert> out) throws Exception {
         boolean flagged = false;
@@ -132,6 +135,7 @@ public class AlertEvaluator extends KeyedProcessFunction<String, Transaction, Al
         ctx.output(ENRICHED_TX_TAG, tx);
     }
 
+    /** {@inheritDoc} Fires when the rapid-activity event-time window expires, evaluating accumulated count. */
     @Override
     public void onTimer(long timestamp, OnTimerContext ctx, Collector<Alert> out) throws Exception {
         // Clean up expired timestamps from state

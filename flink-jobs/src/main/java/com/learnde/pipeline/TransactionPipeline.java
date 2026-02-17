@@ -52,6 +52,7 @@ public class TransactionPipeline {
 
     private static final Logger LOG = LoggerFactory.getLogger(TransactionPipeline.class);
 
+    /** Main entry point. Builds and executes the Flink streaming pipeline. @param args command-line arguments */
     public static void main(String[] args) throws Exception {
         LOG.info("Starting TransactionPipeline...");
 
@@ -239,15 +240,24 @@ public class TransactionPipeline {
             return config;
         }
 
+        /** @return the Kafka bootstrap servers */
         public String getKafkaBootstrapServers() { return kafkaBootstrapServers; }
+        /** @return the input topic name */
         public String getInputTopic() { return inputTopic; }
+        /** @return the alert topic name */
         public String getAlertTopic() { return alertTopic; }
+        /** @return the dead-letter topic name */
         public String getDeadLetterTopic() { return deadLetterTopic; }
+        /** @return the consumer group ID */
         public String getConsumerGroup() { return consumerGroup; }
+        /** @return the rules configuration file path */
         public String getRulesConfigPath() { return rulesConfigPath; }
+        /** @return the Iceberg REST catalog URI */
         public String getCatalogUri() { return catalogUri; }
+        /** @return the warehouse path */
         public String getWarehouse() { return warehouse; }
 
+        /** {@inheritDoc} */
         @Override
         public String toString() {
             return "PipelineConfig{"

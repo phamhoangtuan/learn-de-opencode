@@ -21,6 +21,7 @@ public class HighValueRule implements AlertingRule {
     private final String severity;
     private final boolean enabled;
 
+    /** Constructs a HighValueRule. @param amountThreshold transaction amount threshold @param severity alert severity level @param enabled whether this rule is active */
     public HighValueRule(BigDecimal amountThreshold, String severity, boolean enabled) {
         this.amountThreshold = amountThreshold;
         this.severity = severity;
@@ -32,25 +33,30 @@ public class HighValueRule implements AlertingRule {
         this(new BigDecimal("10000"), "high", true);
     }
 
+    /** {@inheritDoc} */
     @Override
     public String getRuleName() {
         return "high-value-transaction";
     }
 
+    /** {@inheritDoc} */
     @Override
     public String getSeverity() {
         return severity;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isEnabled() {
         return enabled;
     }
 
+    /** @return the amount threshold for high-value detection */
     public BigDecimal getAmountThreshold() {
         return amountThreshold;
     }
 
+    /** {@inheritDoc} */
     @Override
     public Optional<Alert> evaluate(Transaction transaction) {
         if (!enabled || transaction.getAmount() == null) {

@@ -63,19 +63,23 @@ public class TransactionValidator extends ProcessFunction<Transaction, Transacti
     private transient ObjectMapper objectMapper;
     private final String processorId;
 
+    /** Constructs a TransactionValidator with a custom processor ID. @param processorId unique identifier for this validator instance */
     public TransactionValidator(String processorId) {
         this.processorId = processorId;
     }
 
+    /** Default constructor using a generated UUID as processor ID. */
     public TransactionValidator() {
         this("transaction-validator-0");
     }
 
+    /** {@inheritDoc} Initializes the DLQ counter metric. */
     @Override
     public void open(org.apache.flink.configuration.Configuration parameters) {
         this.objectMapper = new ObjectMapper();
     }
 
+    /** {@inheritDoc} Validates transaction fields and routes invalid records to DLQ side output. */
     @Override
     public void processElement(Transaction tx, Context ctx, Collector<Transaction> out)
             throws Exception {

@@ -26,11 +26,13 @@ public class TransactionDeserializer implements DeserializationSchema<Transactio
 
     private transient ObjectMapper objectMapper;
 
+    /** {@inheritDoc} Initializes the Jackson ObjectMapper for JSON deserialization. */
     @Override
     public void open(InitializationContext context) {
         this.objectMapper = new ObjectMapper();
     }
 
+    /** {@inheritDoc} Deserializes JSON bytes into a Transaction. Returns null for malformed input. */
     @Override
     public Transaction deserialize(byte[] message) throws IOException {
         if (objectMapper == null) {
@@ -46,11 +48,13 @@ public class TransactionDeserializer implements DeserializationSchema<Transactio
         }
     }
 
+    /** {@inheritDoc} Always returns false — unbounded stream. */
     @Override
     public boolean isEndOfStream(Transaction nextElement) {
         return false;
     }
 
+    /** {@inheritDoc} Returns TypeInformation for Transaction. */
     @Override
     public TypeInformation<Transaction> getProducedType() {
         return TypeInformation.of(new TypeHint<Transaction>() {});

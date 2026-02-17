@@ -48,7 +48,14 @@ DEFAULT_MIN_SNAPSHOTS = 10
 
 
 def get_catalog(uri: str) -> RestCatalog:
-    """Create and return a PyIceberg REST catalog client."""
+    """Create and return a PyIceberg REST catalog client.
+
+    Args:
+        uri: Iceberg REST catalog URI.
+
+    Returns:
+        Configured RestCatalog instance.
+    """
     return RestCatalog(
         name="rest",
         **{"uri": uri, "s3.endpoint": DEFAULT_S3_ENDPOINT},
@@ -302,7 +309,14 @@ def run_maintenance(
 
 
 def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
-    """Parse CLI arguments for compaction script."""
+    """Parse CLI arguments for compaction script.
+
+    Args:
+        argv: Command-line arguments (defaults to sys.argv).
+
+    Returns:
+        Parsed argument namespace with operation flags and retention settings.
+    """
     parser = argparse.ArgumentParser(
         description="Iceberg table maintenance: compaction, snapshot expiration, orphan cleanup"
     )

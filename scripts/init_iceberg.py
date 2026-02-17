@@ -41,7 +41,11 @@ NAMESPACE = "financial"
 
 
 def get_catalog() -> RestCatalog:
-    """Create and return a PyIceberg REST catalog client."""
+    """Create and return a PyIceberg REST catalog client.
+
+    Returns:
+        Configured RestCatalog instance connected to the REST endpoint.
+    """
     return RestCatalog(
         name="rest",
         **{"uri": ICEBERG_REST_URI, "s3.endpoint": "http://localhost:9000"},
@@ -49,7 +53,11 @@ def get_catalog() -> RestCatalog:
 
 
 def create_namespace(catalog: RestCatalog) -> None:
-    """Create the 'financial' namespace if it doesn't exist."""
+    """Create the 'financial' namespace if it doesn't exist.
+
+    Args:
+        catalog: PyIceberg REST catalog client.
+    """
     try:
         catalog.create_namespace(NAMESPACE)
         logger.info("Created namespace '%s'", NAMESPACE)
@@ -59,9 +67,12 @@ def create_namespace(catalog: RestCatalog) -> None:
 
 def create_transactions_table(catalog: RestCatalog) -> None:
     """Create the transactions Iceberg table.
-    
+
     Schema from data-model.md: 10 base + 3 enrichment fields.
     Partitioned by days(timestamp), sorted by transaction_id.
+
+    Args:
+        catalog: PyIceberg REST catalog client.
     """
     schema = Schema(
         NestedField(field_id=1, name="transaction_id", field_type=StringType(), required=True),
@@ -99,9 +110,12 @@ def create_transactions_table(catalog: RestCatalog) -> None:
 
 def create_alerts_table(catalog: RestCatalog) -> None:
     """Create the alerts Iceberg table.
-    
+
     Schema from data-model.md: 6 fields.
     Partitioned by days(alert_timestamp).
+
+    Args:
+        catalog: PyIceberg REST catalog client.
     """
     schema = Schema(
         NestedField(field_id=1, name="alert_id", field_type=StringType(), required=True),
@@ -129,8 +143,11 @@ def create_alerts_table(catalog: RestCatalog) -> None:
 
 def create_pipeline_session_metadata_table(catalog: RestCatalog) -> None:
     """Create the pipeline_session_metadata Iceberg table.
-    
+
     Schema from data-model.md: 13 fields. No partitioning (low volume).
+
+    Args:
+        catalog: PyIceberg REST catalog client.
     """
     schema = Schema(
         NestedField(field_id=1, name="session_id", field_type=StringType(), required=True),

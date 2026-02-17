@@ -30,6 +30,7 @@ public class RapidActivityRule implements AlertingRule {
     private final String severity;
     private final boolean enabled;
 
+    /** Constructs a RapidActivityRule. @param maxCount maximum transactions allowed in window @param windowMinutes window duration in minutes @param severity alert severity level @param enabled whether this rule is active */
     public RapidActivityRule(int maxCount, int windowMinutes,
                              String severity, boolean enabled) {
         this.maxCount = maxCount;
@@ -43,25 +44,30 @@ public class RapidActivityRule implements AlertingRule {
         this(5, 1, "medium", true);
     }
 
+    /** {@inheritDoc} */
     @Override
     public String getRuleName() {
         return "rapid-activity";
     }
 
+    /** {@inheritDoc} */
     @Override
     public String getSeverity() {
         return severity;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isEnabled() {
         return enabled;
     }
 
+    /** @return maximum transaction count allowed in window */
     public int getMaxCount() {
         return maxCount;
     }
 
+    /** @return window duration in minutes */
     public int getWindowMinutes() {
         return windowMinutes;
     }
