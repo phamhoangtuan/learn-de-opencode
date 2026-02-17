@@ -178,18 +178,18 @@
 
 > **CRITICAL: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T070 [P] [US4] Integration test: all services reach healthy state within 3 minutes after docker compose up in tests/integration/test_environment_setup.py
-- [ ] T071 [P] [US4] Integration test: pipeline resumes from checkpoint after forced service restart with zero data loss in tests/integration/test_restart_recovery.py
-- [ ] T072 [US4] Integration test: total memory consumption stays under 6GB during sustained 10 tx/sec operation in tests/integration/test_resource_limits.py
+- [x] T070 [P] [US4] Integration test: all services reach healthy state within 3 minutes after docker compose up in tests/integration/test_environment_setup.py
+- [x] T071 [P] [US4] Integration test: pipeline resumes from checkpoint after forced service restart with zero data loss in tests/integration/test_restart_recovery.py
+- [x] T072 [US4] Integration test: total memory consumption stays under 6GB during sustained 10 tx/sec operation in tests/integration/test_resource_limits.py
 
 ### Implementation for User Story 4
 
-- [ ] T073 [US4] Implement scripts/health-check.sh: query all service health endpoints, display status table (service, status, uptime), show key metrics (throughput, latency, error counts, Kafka consumer lag) from structured logs and Flink REST API
-- [ ] T074 [US4] Add Docker healthchecks for all services in docker-compose.yml: Kafka (kafka-broker-api-versions), Iceberg REST (curl /v1/namespaces), Flink (curl /overview), Generator (process check)
-- [ ] T075 [US4] Configure persistent Docker volumes for Iceberg warehouse data and Flink checkpoints to survive restarts (FR-013)
-- [ ] T076 [US4] Add graceful shutdown handling: generator SIGTERM handler (flush Kafka buffer, log final stats), Flink cancel-with-savepoint via REST API
-- [ ] T077 [US4] Validate memory limits: add mem_limit to all services in docker-compose.yml per research.md R5 budget (total ~3.4GB), add docker stats verification to health-check.sh
-- [ ] T078 [US4] Add service dependency ordering in docker-compose.yml with depends_on + healthcheck conditions (kafka → iceberg-rest → flink → generator)
+- [x] T073 [US4] Implement scripts/health-check.sh: query all service health endpoints, display status table (service, status, uptime), show key metrics (throughput, latency, error counts, Kafka consumer lag) from structured logs and Flink REST API
+- [x] T074 [US4] Add Docker healthchecks for all services in docker-compose.yml: Kafka (kafka-broker-api-versions), Iceberg REST (curl /v1/namespaces), Flink (curl /overview), Generator (process check)
+- [x] T075 [US4] Configure persistent Docker volumes for Iceberg warehouse data and Flink checkpoints to survive restarts (FR-013)
+- [x] T076 [US4] Add graceful shutdown handling: generator SIGTERM handler (flush Kafka buffer, log final stats), Flink cancel-with-savepoint via REST API
+- [x] T077 [US4] Validate memory limits: add mem_limit to all services in docker-compose.yml per research.md R5 budget (total ~3.4GB), add docker stats verification to health-check.sh
+- [x] T078 [US4] Add service dependency ordering in docker-compose.yml with depends_on + healthcheck conditions (kafka → iceberg-rest → flink → generator)
 
 **Checkpoint**: US4 complete — `docker compose up -d` starts everything, health-check.sh confirms status, data survives restarts, memory stays under 6GB.
 
