@@ -430,3 +430,105 @@ class TestValidationIntegration:
             assert row[1] == 3
         finally:
             conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Phase 5 (T032): Deduplication integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestDeduplicationIntegration:
+    """Integration tests for idempotent re-ingestion."""
+
+    def test_idempotent_reingestion(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+        sample_transactions_df: pl.DataFrame,
+    ) -> None:
+        """Given same file ingested twice, record count unchanged."""
+        _write_parquet(tmp_source_dir, "txns.parquet", sample_transactions_df)
+
+        result1 = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+        result2 = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        assert result1.records_loaded == 5
+        assert result2.records_loaded == 0
+        assert result2.duplicates_skipped == 5
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM transactions"
+            ).fetchone()[0]
+            assert count == 5
+        finally:
+            conn.close()
+
+    def test_within_file_duplicates_skipped(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+        sample_transactions_df: pl.DataFrame,
+    ) -> None:
+        """Given a file with duplicate IDs, only unique records loaded."""
+        # Create a file with duplicate transaction_ids
+        dup_df = pl.concat([
+            sample_transactions_df,
+            sample_transactions_df.head(2),
+        ])
+        _write_parquet(tmp_source_dir, "with_dups.parquet", dup_df)
+
+        result = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        assert result.records_loaded == 5
+        assert result.duplicates_skipped == 2
+
+    def test_cross_file_duplicates_skipped(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+        sample_transactions_df: pl.DataFrame,
+    ) -> None:
+        """Given overlapping files, duplicates across files are skipped."""
+        df1 = sample_transactions_df.head(3)
+        df2 = sample_transactions_df  # overlaps with first 3
+
+        _write_parquet(tmp_source_dir, "batch_001.parquet", df1)
+        _write_parquet(tmp_source_dir, "batch_002.parquet", df2)
+
+        result = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        assert result.records_loaded == 5
+        assert result.duplicates_skipped == 3
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM transactions"
+            ).fetchone()[0]
+            assert count == 5
+        finally:
+            conn.close()
+
+    def test_ingestion_runs_tracks_duplicates(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+        sample_transactions_df: pl.DataFrame,
+    ) -> None:
+        """Given duplicates, ingestion_runs table records skipped count."""
+        _write_parquet(tmp_source_dir, "txns.parquet", sample_transactions_df)
+
+        run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+        result2 = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            row = conn.execute(
+                "SELECT duplicates_skipped FROM ingestion_runs WHERE run_id = ?",
+                [result2.run_id],
+            ).fetchone()
+            assert row[0] == 5
+        finally:
+            conn.close()

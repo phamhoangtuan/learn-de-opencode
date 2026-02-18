@@ -100,16 +100,16 @@
 
 ### Tests for User Story 3
 
-- [ ] T030 [P] [US3] Write unit tests for within-file deduplication in `tests/unit/test_dedup.py`
-- [ ] T031 [P] [US3] Write unit tests for cross-file deduplication (anti-join against existing IDs) in `tests/unit/test_dedup.py`
-- [ ] T032 [US3] Write integration test for idempotent re-ingestion in `tests/integration/test_pipeline.py`
+- [x] T030 [P] [US3] Write unit tests for within-file deduplication in `tests/unit/test_dedup.py`
+- [x] T031 [P] [US3] Write unit tests for cross-file deduplication (anti-join against existing IDs) in `tests/unit/test_dedup.py`
+- [x] T032 [US3] Write integration test for idempotent re-ingestion in `tests/integration/test_pipeline.py`
 
 ### Implementation for User Story 3
 
-- [ ] T033 [US3] Implement within-file deduplication (Polars unique by transaction_id, keep first) in `src/ingestion/dedup.py`
-- [ ] T034 [US3] Implement cross-file deduplication (load existing IDs from DuckDB, anti-join) in `src/ingestion/dedup.py`
-- [ ] T035 [US3] Integrate deduplication into pipeline orchestrator (dedup after validation, before load) in `src/ingestion/pipeline.py`
-- [ ] T036 [US3] Update run summary to include duplicates_skipped count in `src/ingestion/pipeline.py`
+- [x] T033 [US3] Implement within-file deduplication (Polars unique by transaction_id, keep first) in `src/ingestion/dedup.py`
+- [x] T034 [US3] Implement cross-file deduplication (load existing IDs from DuckDB, anti-join) in `src/ingestion/dedup.py`
+- [x] T035 [US3] Integrate deduplication into pipeline orchestrator (dedup after validation, before load) in `src/ingestion/pipeline.py`
+- [x] T036 [US3] Update run summary to include duplicates_skipped count in `src/ingestion/pipeline.py`
 
 **Checkpoint**: Pipeline is fully idempotent. Re-running produces zero new records. Duplicates tracked in summary.
 

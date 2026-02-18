@@ -5,6 +5,7 @@ validate, deduplicate, enrich with lineage, and load into DuckDB.
 
 Phase 3 (US1) implements the MVP: discover → read → load → summary.
 Phase 4 (US2) adds schema validation and quarantine routing.
+Phase 5 (US3) adds within-file and cross-file deduplication.
 """
 
 from __future__ import annotations
@@ -19,12 +20,14 @@ from pathlib import Path
 import duckdb
 import polars as pl
 
+from src.ingestion.dedup import deduplicate_cross_file, deduplicate_within_file
 from src.ingestion.loader import (
     DEFAULT_DB_PATH,
     complete_run,
     connect,
     create_run,
     create_tables,
+    get_existing_transaction_ids,
     insert_quarantine_batch,
     insert_transactions,
 )
@@ -107,16 +110,18 @@ def _process_file(
     conn: duckdb.DuckDBPyConnection,
     file_path: Path,
     run_id: str,
+    existing_ids: set[str],
 ) -> FileResult:
     """Process a single Parquet file through the pipeline.
 
-    Flow: read → schema validate → record validate → enrich → load.
+    Flow: read → schema validate → record validate → dedup → enrich → load.
     Invalid records are routed to the quarantine table.
 
     Args:
         conn: An open DuckDB connection with tables created.
         file_path: Path to the Parquet file.
         run_id: Pipeline run identifier.
+        existing_ids: Transaction IDs already in the warehouse (for cross-file dedup).
 
     Returns:
         FileResult with processing outcome.
@@ -151,22 +156,43 @@ def _process_file(
             "Quarantined %d invalid record(s) from %s", quarantined, file_name,
         )
 
-    # Enrich valid records with lineage columns
     if valid_df.is_empty():
         return FileResult(
             file_name=file_name,
             records_quarantined=quarantined,
         )
 
-    enriched = enrich_with_lineage(valid_df, source_file=file_name, run_id=run_id)
+    # Within-file deduplication (US3)
+    deduped, within_skipped = deduplicate_within_file(valid_df)
+
+    # Cross-file deduplication (US3)
+    deduped, cross_skipped = deduplicate_cross_file(
+        deduped, existing_ids=existing_ids,
+    )
+    total_skipped = within_skipped + cross_skipped
+
+    if deduped.is_empty():
+        return FileResult(
+            file_name=file_name,
+            records_quarantined=quarantined,
+            duplicates_skipped=total_skipped,
+        )
+
+    # Enrich valid, unique records with lineage columns
+    enriched = enrich_with_lineage(deduped, source_file=file_name, run_id=run_id)
 
     # Load into DuckDB
     loaded = insert_transactions(conn, enriched)
+
+    # Update existing_ids with newly loaded IDs for subsequent files
+    new_ids = set(deduped["transaction_id"].to_list())
+    existing_ids.update(new_ids)
 
     return FileResult(
         file_name=file_name,
         records_loaded=loaded,
         records_quarantined=quarantined,
+        duplicates_skipped=total_skipped,
     )
 
 
@@ -253,6 +279,9 @@ def run_pipeline(
         create_tables(conn)
         create_run(conn, run_id=run_id, started_at=started_at.isoformat())
 
+        # Load existing IDs for cross-file deduplication (US3)
+        existing_ids = get_existing_transaction_ids(conn)
+
         # Discover files
         files = discover_parquet_files(source_dir)
         if not files:
@@ -260,7 +289,7 @@ def run_pipeline(
 
         # Process each file
         for file_path in files:
-            file_result = _process_file(conn, file_path, run_id)
+            file_result = _process_file(conn, file_path, run_id, existing_ids)
             result.add_file_result(file_result)
 
         # Finalize
