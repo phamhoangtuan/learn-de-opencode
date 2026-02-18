@@ -160,12 +160,12 @@
 
 **Purpose**: Quality assurance, documentation, and final validation
 
-- [ ] T046 [P] Write data quality tests (6Cs validation: completeness, consistency, conformity) in `tests/quality/test_ingestion_quality.py`
-- [ ] T047 [P] Add logging throughout pipeline (info, warning, error levels) in `src/ingestion/pipeline.py`
-- [ ] T048 Run full test suite (`uv run pytest tests/ -v`) and ensure all tests pass
-- [ ] T049 Run linter (`uv run ruff check .`) and fix any issues
-- [ ] T050 Validate quickstart.md end-to-end (generate data → ingest → query)
-- [ ] T051 Update `AGENTS.md` if any new technologies were added
+- [x] T046 [P] Write data quality tests (6Cs validation: completeness, consistency, conformity) in `tests/quality/test_ingestion_quality.py`
+- [x] T047 [P] Add logging throughout pipeline (info, warning, error levels) in `src/ingestion/pipeline.py`
+- [x] T048 Run full test suite (`uv run pytest tests/ -v`) and ensure all tests pass
+- [x] T049 Run linter (`uv run ruff check .`) and fix any issues
+- [x] T050 Validate quickstart.md end-to-end (generate data → ingest → query)
+- [x] T051 Update `AGENTS.md` if any new technologies were added
 
 ---
 
