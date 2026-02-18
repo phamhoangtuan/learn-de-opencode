@@ -19,10 +19,10 @@
 
 **Purpose**: Project initialization, dependencies, and directory structure
 
-- [ ] T001 Create `src/ingestion/` module directory with `__init__.py`
-- [ ] T002 [P] Add `duckdb` dependency to `pyproject.toml` and run `uv sync`
-- [ ] T003 [P] Create `data/warehouse/` directory and add to `.gitignore` if not already excluded
-- [ ] T004 [P] Create test fixture files in `tests/conftest.py` for ingestion tests (temp DuckDB, sample DataFrames, temp Parquet files)
+- [x] T001 Create `src/ingestion/` module directory with `__init__.py`
+- [x] T002 [P] Add `duckdb` dependency to `pyproject.toml` and run `uv sync`
+- [x] T003 [P] Create `data/warehouse/` directory and add to `.gitignore` if not already excluded
+- [x] T004 [P] Create test fixture files in `tests/conftest.py` for ingestion tests (temp DuckDB, sample DataFrames, temp Parquet files)
 
 ---
 
@@ -30,12 +30,12 @@
 
 **Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
 
-- [ ] T005 Implement ingestion domain models (RunResult, RunStatus, ValidationResult) in `src/ingestion/models.py`
-- [ ] T006 [P] Implement DuckDB connection manager and table creation (transactions, quarantine, ingestion_runs) in `src/ingestion/loader.py`
-- [ ] T007 [P] Implement expected schema definition (9 source columns + types + validation rules) in `src/ingestion/validator.py`
-- [ ] T008 Write unit tests for domain models in `tests/unit/test_ingestion_models.py`
-- [ ] T009 [P] Write unit tests for DuckDB table creation and connection in `tests/unit/test_loader.py`
-- [ ] T010 [P] Write unit tests for schema definition constants in `tests/unit/test_validator.py`
+- [x] T005 Implement ingestion domain models (RunResult, RunStatus, ValidationResult) in `src/ingestion/models.py`
+- [x] T006 [P] Implement DuckDB connection manager and table creation (transactions, quarantine, ingestion_runs) in `src/ingestion/loader.py`
+- [x] T007 [P] Implement expected schema definition (9 source columns + types + validation rules) in `src/ingestion/validator.py`
+- [x] T008 Write unit tests for domain models in `tests/unit/test_ingestion_models.py`
+- [x] T009 [P] Write unit tests for DuckDB table creation and connection in `tests/unit/test_loader.py`
+- [x] T010 [P] Write unit tests for schema definition constants in `tests/unit/test_validator.py`
 
 **Checkpoint**: Foundation ready — database schema, domain models, and validation rules established. User story implementation can now begin.
 

@@ -8,6 +8,8 @@ dependencies = [
     "polars>=1.0",
     "numpy>=2.0",
     "faker>=30.0",
+    "duckdb>=1.0",
+    "pyarrow>=17.0",
 ]
 
 [project.optional-dependencies]
