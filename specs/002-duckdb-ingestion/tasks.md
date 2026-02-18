@@ -75,18 +75,18 @@
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] Write unit tests for file-level schema validation (missing columns, wrong types) in `tests/unit/test_validator.py`
-- [ ] T022 [P] [US2] Write unit tests for record-level value validation (nulls, ranges) in `tests/unit/test_validator.py`
-- [ ] T023 [P] [US2] Write unit tests for quarantine record insertion in `tests/unit/test_loader.py`
-- [ ] T024 [US2] Write integration test for mixed valid/invalid records in one file in `tests/integration/test_pipeline.py`
+- [x] T021 [P] [US2] Write unit tests for file-level schema validation (missing columns, wrong types) in `tests/unit/test_validator.py`
+- [x] T022 [P] [US2] Write unit tests for record-level value validation (nulls, ranges) in `tests/unit/test_validator.py`
+- [x] T023 [P] [US2] Write unit tests for quarantine record insertion in `tests/unit/test_loader.py`
+- [x] T024 [US2] Write integration test for mixed valid/invalid records in one file in `tests/integration/test_pipeline.py`
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Implement file-level schema validation (column names, data types) in `src/ingestion/validator.py`
-- [ ] T026 [US2] Implement record-level value validation (null checks, range checks, enum checks) in `src/ingestion/validator.py`
-- [ ] T027 [US2] Implement quarantine record insertion (store original data as JSON + rejection reason) in `src/ingestion/loader.py`
-- [ ] T028 [US2] Integrate validation into pipeline orchestrator (validate before load, route failures to quarantine) in `src/ingestion/pipeline.py`
-- [ ] T029 [US2] Update run summary to include records_quarantined count in `src/ingestion/pipeline.py`
+- [x] T025 [US2] Implement file-level schema validation (column names, data types) in `src/ingestion/validator.py`
+- [x] T026 [US2] Implement record-level value validation (null checks, range checks, enum checks) in `src/ingestion/validator.py`
+- [x] T027 [US2] Implement quarantine record insertion (store original data as JSON + rejection reason) in `src/ingestion/loader.py`
+- [x] T028 [US2] Integrate validation into pipeline orchestrator (validate before load, route failures to quarantine) in `src/ingestion/pipeline.py`
+- [x] T029 [US2] Update run summary to include records_quarantined count in `src/ingestion/pipeline.py`
 
 **Checkpoint**: Pipeline validates all records. Invalid data quarantined with diagnostics. Warehouse contains only clean data.
 

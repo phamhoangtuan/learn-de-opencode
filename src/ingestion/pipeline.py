@@ -4,10 +4,12 @@ Coordinates the end-to-end flow: discover Parquet files, read via Polars,
 validate, deduplicate, enrich with lineage, and load into DuckDB.
 
 Phase 3 (US1) implements the MVP: discover → read → load → summary.
+Phase 4 (US2) adds schema validation and quarantine routing.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 import uuid
@@ -23,9 +25,11 @@ from src.ingestion.loader import (
     connect,
     create_run,
     create_tables,
+    insert_quarantine_batch,
     insert_transactions,
 )
 from src.ingestion.models import FileResult, RunResult, RunStatus
+from src.ingestion.validator import validate_file_schema, validate_records
 
 # Default source directory per FR-001
 DEFAULT_SOURCE_DIR: str = "data/raw"
@@ -106,7 +110,8 @@ def _process_file(
 ) -> FileResult:
     """Process a single Parquet file through the pipeline.
 
-    Phase 3 MVP: read → enrich → load. No validation or dedup yet.
+    Flow: read → schema validate → record validate → enrich → load.
+    Invalid records are routed to the quarantine table.
 
     Args:
         conn: An open DuckDB connection with tables created.
@@ -123,13 +128,99 @@ def _process_file(
         logger.error("Failed to read %s: %s", file_name, exc)
         return FileResult(file_name=file_name, error=str(exc))
 
-    # Enrich with lineage columns
-    enriched = enrich_with_lineage(df, source_file=file_name, run_id=run_id)
+    # File-level schema validation (FR-006)
+    schema_errors = validate_file_schema(df)
+    if schema_errors:
+        error_msg = "; ".join(schema_errors)
+        logger.warning("Schema validation failed for %s: %s", file_name, error_msg)
+        return FileResult(file_name=file_name, error=error_msg)
+
+    # Record-level validation (FR-005, FR-007)
+    validated = validate_records(df)
+    valid_df = validated.filter(pl.col("_is_valid")).drop("_is_valid", "_rejection_reason")
+    invalid_df = validated.filter(~pl.col("_is_valid"))
+
+    # Quarantine invalid records (FR-008)
+    quarantined = 0
+    if not invalid_df.is_empty():
+        quarantine_records = _build_quarantine_records(
+            invalid_df, source_file=file_name, run_id=run_id,
+        )
+        quarantined = insert_quarantine_batch(conn, records=quarantine_records)
+        logger.info(
+            "Quarantined %d invalid record(s) from %s", quarantined, file_name,
+        )
+
+    # Enrich valid records with lineage columns
+    if valid_df.is_empty():
+        return FileResult(
+            file_name=file_name,
+            records_quarantined=quarantined,
+        )
+
+    enriched = enrich_with_lineage(valid_df, source_file=file_name, run_id=run_id)
 
     # Load into DuckDB
     loaded = insert_transactions(conn, enriched)
 
-    return FileResult(file_name=file_name, records_loaded=loaded)
+    return FileResult(
+        file_name=file_name,
+        records_loaded=loaded,
+        records_quarantined=quarantined,
+    )
+
+
+def _build_quarantine_records(
+    invalid_df: pl.DataFrame,
+    *,
+    source_file: str,
+    run_id: str,
+) -> list[dict[str, str]]:
+    """Convert invalid DataFrame rows to quarantine record dicts.
+
+    Serializes each row as JSON and extracts the rejection reason.
+
+    Args:
+        invalid_df: DataFrame with _is_valid and _rejection_reason columns.
+        source_file: Name of the source Parquet file.
+        run_id: Pipeline run identifier.
+
+    Returns:
+        List of dicts suitable for insert_quarantine_batch.
+    """
+    records: list[dict[str, str]] = []
+    # Get column names excluding internal validation columns
+    data_columns = [
+        c for c in invalid_df.columns
+        if c not in ("_is_valid", "_rejection_reason")
+    ]
+
+    for row in invalid_df.iter_rows(named=True):
+        record_data = {col: _serialize_value(row[col]) for col in data_columns}
+        records.append({
+            "source_file": source_file,
+            "record_data": json.dumps(record_data),
+            "rejection_reason": row["_rejection_reason"],
+            "run_id": run_id,
+        })
+
+    return records
+
+
+def _serialize_value(value: object) -> str:
+    """Convert a value to a JSON-safe string representation.
+
+    Args:
+        value: Any value from a DataFrame row.
+
+    Returns:
+        String representation of the value.
+    """
+    if value is None:
+        return "null"
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return str(value)
 
 
 def run_pipeline(

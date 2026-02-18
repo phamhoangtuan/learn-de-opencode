@@ -1,7 +1,8 @@
-"""Integration tests for the ingestion pipeline (T013)."""
+"""Integration tests for the ingestion pipeline (T013, T024)."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 import duckdb
@@ -229,3 +230,203 @@ def _write_parquet(directory: Path, filename: str, df: pl.DataFrame) -> Path:
     path = directory / filename
     df.write_parquet(path)
     return path
+
+
+def _make_invalid_records_df() -> pl.DataFrame:
+    """Create a DataFrame with a mix of valid and invalid records."""
+    return pl.DataFrame({
+        "transaction_id": [
+            "valid-001",
+            "invalid-neg-amount",
+            "invalid-bad-currency",
+            "valid-002",
+            "invalid-bad-status",
+        ],
+        "timestamp": [
+            datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC),
+            datetime(2026, 1, 15, 11, 0, 0, tzinfo=UTC),
+            datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC),
+            datetime(2026, 1, 15, 13, 0, 0, tzinfo=UTC),
+            datetime(2026, 1, 15, 14, 0, 0, tzinfo=UTC),
+        ],
+        "amount": [10.00, -5.00, 20.00, 30.00, 40.00],
+        "currency": ["USD", "USD", "XXX", "EUR", "GBP"],
+        "merchant_name": [
+            "Shop A", "Shop B", "Shop C", "Shop D", "Shop E",
+        ],
+        "category": [
+            "Groceries", "Groceries", "Groceries", "Groceries", "Groceries",
+        ],
+        "account_id": [
+            "ACC-00001", "ACC-00002", "ACC-00003", "ACC-00004", "ACC-00005",
+        ],
+        "transaction_type": ["debit", "debit", "debit", "credit", "debit"],
+        "status": [
+            "completed", "completed", "completed", "completed", "invalid_status",
+        ],
+    })
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 (T024): Validation + quarantine integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestValidationIntegration:
+    """Integration tests for schema validation and quarantine routing."""
+
+    def test_mixed_valid_invalid_records(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+    ) -> None:
+        """Given mixed records, valid load to transactions, invalid to quarantine."""
+        df = _make_invalid_records_df()
+        _write_parquet(tmp_source_dir, "mixed.parquet", df)
+
+        result = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        assert result.status == RunStatus.COMPLETED
+        assert result.records_loaded == 2
+        assert result.records_quarantined == 3
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            txn_count = conn.execute(
+                "SELECT COUNT(*) FROM transactions"
+            ).fetchone()[0]
+            assert txn_count == 2
+
+            quar_count = conn.execute(
+                "SELECT COUNT(*) FROM quarantine"
+            ).fetchone()[0]
+            assert quar_count == 3
+        finally:
+            conn.close()
+
+    def test_quarantine_contains_rejection_reason(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+    ) -> None:
+        """Given invalid records, quarantine stores rejection reason."""
+        df = _make_invalid_records_df()
+        _write_parquet(tmp_source_dir, "mixed.parquet", df)
+
+        run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            rows = conn.execute(
+                "SELECT record_data, rejection_reason FROM quarantine"
+            ).fetchall()
+            assert len(rows) == 3
+            # Each quarantine record should have a non-empty rejection reason
+            for row in rows:
+                assert row[0]  # record_data is not empty
+                assert row[1]  # rejection_reason is not empty
+        finally:
+            conn.close()
+
+    def test_quarantine_lineage_matches_run(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+    ) -> None:
+        """Given quarantined records, lineage columns link to correct run."""
+        df = _make_invalid_records_df()
+        _write_parquet(tmp_source_dir, "mixed.parquet", df)
+
+        result = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            rows = conn.execute(
+                "SELECT DISTINCT source_file, run_id FROM quarantine"
+            ).fetchall()
+            assert len(rows) == 1
+            assert rows[0][0] == "mixed.parquet"
+            assert rows[0][1] == result.run_id
+        finally:
+            conn.close()
+
+    def test_schema_failure_quarantines_entire_file(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+    ) -> None:
+        """Given a file with wrong schema, entire file is rejected."""
+        bad_df = pl.DataFrame({
+            "wrong_column": ["a", "b"],
+            "another_wrong": [1, 2],
+        })
+        _write_parquet(tmp_source_dir, "bad_schema.parquet", bad_df)
+
+        result = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        assert result.status == RunStatus.COMPLETED
+        assert result.records_loaded == 0
+        assert result.files_processed == 1
+        # Schema failure is treated as a file-level error
+        assert result.file_results[0].error is not None
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            txn_count = conn.execute(
+                "SELECT COUNT(*) FROM transactions"
+            ).fetchone()[0]
+            assert txn_count == 0
+        finally:
+            conn.close()
+
+    def test_all_valid_records_none_quarantined(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+        sample_transactions_df: pl.DataFrame,
+    ) -> None:
+        """Given all valid records, zero quarantined, all loaded."""
+        _write_parquet(tmp_source_dir, "valid.parquet", sample_transactions_df)
+
+        result = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        assert result.records_loaded == 5
+        assert result.records_quarantined == 0
+
+    def test_run_summary_includes_quarantine_count(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+    ) -> None:
+        """Given quarantined records, run summary reflects count (T029)."""
+        df = _make_invalid_records_df()
+        _write_parquet(tmp_source_dir, "mixed.parquet", df)
+
+        result = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+        summary = result.summary()
+
+        assert "3" in summary  # records quarantined
+        assert "2" in summary  # records loaded
+
+    def test_ingestion_runs_records_quarantine_count(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+    ) -> None:
+        """Given quarantined records, ingestion_runs table tracks count."""
+        df = _make_invalid_records_df()
+        _write_parquet(tmp_source_dir, "mixed.parquet", df)
+
+        result = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            row = conn.execute(
+                "SELECT records_loaded, records_quarantined "
+                "FROM ingestion_runs WHERE run_id = ?",
+                [result.run_id],
+            ).fetchone()
+            assert row[0] == 2
+            assert row[1] == 3
+        finally:
+            conn.close()
