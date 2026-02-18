@@ -532,3 +532,144 @@ class TestDeduplicationIntegration:
             assert row[0] == 5
         finally:
             conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Phase 6 (T038): Lineage tracking integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestLineageTracking:
+    """Integration tests for multi-run lineage traceability."""
+
+    def test_multi_run_lineage_distinguishable(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+        sample_transactions_df: pl.DataFrame,
+    ) -> None:
+        """Given two runs with different files, records are traceable to their run."""
+        df1 = sample_transactions_df.head(2).with_columns(
+            pl.Series("transaction_id", ["run1-id-1", "run1-id-2"]),
+        )
+        df2 = sample_transactions_df.head(3).with_columns(
+            pl.Series("transaction_id", ["run2-id-1", "run2-id-2", "run2-id-3"]),
+        )
+
+        _write_parquet(tmp_source_dir, "batch_run1.parquet", df1)
+        result1 = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        # Replace file for second run
+        (tmp_source_dir / "batch_run1.parquet").unlink()
+        _write_parquet(tmp_source_dir, "batch_run2.parquet", df2)
+        result2 = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        assert result1.run_id != result2.run_id
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            # Run 1 records
+            run1_rows = conn.execute(
+                "SELECT source_file, run_id FROM transactions WHERE run_id = ?",
+                [result1.run_id],
+            ).fetchall()
+            assert len(run1_rows) == 2
+            assert all(row[0] == "batch_run1.parquet" for row in run1_rows)
+
+            # Run 2 records
+            run2_rows = conn.execute(
+                "SELECT source_file, run_id FROM transactions WHERE run_id = ?",
+                [result2.run_id],
+            ).fetchall()
+            assert len(run2_rows) == 3
+            assert all(row[0] == "batch_run2.parquet" for row in run2_rows)
+
+            # Total
+            total = conn.execute(
+                "SELECT COUNT(*) FROM transactions"
+            ).fetchone()[0]
+            assert total == 5
+
+            # Distinct run_ids
+            runs = conn.execute(
+                "SELECT DISTINCT run_id FROM transactions ORDER BY run_id"
+            ).fetchall()
+            assert len(runs) == 2
+        finally:
+            conn.close()
+
+    def test_ingestion_runs_table_tracks_multiple_runs(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+        sample_transactions_df: pl.DataFrame,
+    ) -> None:
+        """Given multiple pipeline executions, ingestion_runs has one row per run."""
+        df1 = sample_transactions_df.head(2).with_columns(
+            pl.Series("transaction_id", ["mr-id-1", "mr-id-2"]),
+        )
+        df2 = sample_transactions_df.head(1).with_columns(
+            pl.Series("transaction_id", ["mr-id-3"]),
+        )
+
+        _write_parquet(tmp_source_dir, "file_a.parquet", df1)
+        result1 = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        (tmp_source_dir / "file_a.parquet").unlink()
+        _write_parquet(tmp_source_dir, "file_b.parquet", df2)
+        result2 = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            rows = conn.execute(
+                "SELECT run_id, status, records_loaded "
+                "FROM ingestion_runs ORDER BY started_at"
+            ).fetchall()
+            assert len(rows) == 2
+            assert rows[0][0] == result1.run_id
+            assert rows[0][1] == "completed"
+            assert rows[0][2] == 2
+            assert rows[1][0] == result2.run_id
+            assert rows[1][1] == "completed"
+            assert rows[1][2] == 1
+        finally:
+            conn.close()
+
+    def test_quarantine_records_traceable_to_run(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+    ) -> None:
+        """Given quarantined records across runs, each links to correct run_id."""
+        # Run 1: file with invalid records
+        df1 = _make_invalid_records_df().with_columns(
+            pl.Series("transaction_id", [
+                "qr-valid-1", "qr-inv-1", "qr-inv-2", "qr-valid-2", "qr-inv-3",
+            ]),
+        )
+        _write_parquet(tmp_source_dir, "mixed_run1.parquet", df1)
+        result1 = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        # Run 2: another file with different invalid records
+        df2 = _make_invalid_records_df().head(3).with_columns(
+            pl.Series("transaction_id", ["qr-v3", "qr-inv-4", "qr-inv-5"]),
+        )
+        (tmp_source_dir / "mixed_run1.parquet").unlink()
+        _write_parquet(tmp_source_dir, "mixed_run2.parquet", df2)
+        result2 = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            q1 = conn.execute(
+                "SELECT COUNT(*) FROM quarantine WHERE run_id = ?",
+                [result1.run_id],
+            ).fetchone()[0]
+            q2 = conn.execute(
+                "SELECT COUNT(*) FROM quarantine WHERE run_id = ?",
+                [result2.run_id],
+            ).fetchone()[0]
+
+            assert q1 == 3  # 3 invalid from run 1
+            assert q2 == 2  # 2 invalid from run 2 (neg amount + bad currency)
+        finally:
+            conn.close()

@@ -123,14 +123,14 @@
 
 ### Tests for User Story 4
 
-- [ ] T037 [P] [US4] Write unit tests for lineage column enrichment in `tests/unit/test_pipeline.py`
-- [ ] T038 [US4] Write integration test for multi-run lineage traceability in `tests/integration/test_pipeline.py`
+- [x] T037 [P] [US4] Write unit tests for lineage column enrichment in `tests/unit/test_pipeline.py`
+- [x] T038 [US4] Write integration test for multi-run lineage traceability in `tests/integration/test_pipeline.py`
 
 ### Implementation for User Story 4
 
-- [ ] T039 [US4] Implement lineage column enrichment (add source_file, ingested_at, run_id columns to DataFrame before insert) in `src/ingestion/pipeline.py`
-- [ ] T040 [US4] Ensure quarantine records also carry lineage metadata in `src/ingestion/loader.py`
-- [ ] T041 [US4] Implement unique run_id generation (UUID) in `src/ingestion/pipeline.py`
+- [x] T039 [US4] Implement lineage column enrichment (add source_file, ingested_at, run_id columns to DataFrame before insert) in `src/ingestion/pipeline.py`
+- [x] T040 [US4] Ensure quarantine records also carry lineage metadata in `src/ingestion/loader.py`
+- [x] T041 [US4] Implement unique run_id generation (UUID) in `src/ingestion/pipeline.py`
 
 **Checkpoint**: Every record in the warehouse is traceable to its source file and ingestion run.
 
