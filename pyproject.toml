@@ -52,3 +52,8 @@ select = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
+
+[dependency-groups]
+dev = [
+    "pytz>=2025.2",
+]

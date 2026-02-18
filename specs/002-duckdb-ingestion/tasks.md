@@ -49,19 +49,19 @@
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Write unit tests for Parquet file discovery (find .parquet files in directory) in `tests/unit/test_pipeline.py`
-- [ ] T012 [P] [US1] Write unit tests for DataFrame-to-DuckDB insert logic in `tests/unit/test_loader.py`
-- [ ] T013 [US1] Write integration test for end-to-end ingestion (Parquet in → DuckDB out) in `tests/integration/test_pipeline.py`
+- [x] T011 [P] [US1] Write unit tests for Parquet file discovery (find .parquet files in directory) in `tests/unit/test_pipeline.py`
+- [x] T012 [P] [US1] Write unit tests for DataFrame-to-DuckDB insert logic in `tests/unit/test_loader.py`
+- [x] T013 [US1] Write integration test for end-to-end ingestion (Parquet in → DuckDB out) in `tests/integration/test_pipeline.py`
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Implement Parquet file discovery (list .parquet files in source directory) in `src/ingestion/pipeline.py`
-- [ ] T015 [US1] Implement Parquet reading via Polars in `src/ingestion/pipeline.py`
-- [ ] T016 [US1] Implement DataFrame insertion into DuckDB transactions table in `src/ingestion/loader.py`
-- [ ] T017 [US1] Implement pipeline orchestrator (discover → read → load → summary) in `src/ingestion/pipeline.py`
-- [ ] T018 [US1] Implement run tracking (create ingestion_runs record, update on completion) in `src/ingestion/loader.py`
-- [ ] T019 [US1] Implement CLI entrypoint with argparse in `src/ingest_transactions.py` (PEP 723 inline deps)
-- [ ] T020 [US1] Implement run summary output (files processed, records loaded, elapsed time) in `src/ingestion/pipeline.py`
+- [x] T014 [US1] Implement Parquet file discovery (list .parquet files in source directory) in `src/ingestion/pipeline.py`
+- [x] T015 [US1] Implement Parquet reading via Polars in `src/ingestion/pipeline.py`
+- [x] T016 [US1] Implement DataFrame insertion into DuckDB transactions table in `src/ingestion/loader.py`
+- [x] T017 [US1] Implement pipeline orchestrator (discover → read → load → summary) in `src/ingestion/pipeline.py`
+- [x] T018 [US1] Implement run tracking (create ingestion_runs record, update on completion) in `src/ingestion/loader.py`
+- [x] T019 [US1] Implement CLI entrypoint with argparse in `src/ingest_transactions.py` (PEP 723 inline deps)
+- [x] T020 [US1] Implement run summary output (files processed, records loaded, elapsed time) in `src/ingestion/pipeline.py`
 
 **Checkpoint**: MVP complete. Pipeline reads Parquet files and loads them into DuckDB. Queryable warehouse operational.
 
