@@ -673,3 +673,120 @@ class TestLineageTracking:
             assert q2 == 2  # 2 invalid from run 2 (neg amount + bad currency)
         finally:
             conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Phase 7 (T043): Date-based partitioning integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestDateBasedPartitioning:
+    """Integration tests for date-range query using transaction_date column."""
+
+    def test_date_range_query_returns_correct_subset(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+        sample_transactions_df: pl.DataFrame,
+    ) -> None:
+        """Given multi-date records, date-range query returns only matching rows."""
+        _write_parquet(tmp_source_dir, "txns.parquet", sample_transactions_df)
+        run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        import datetime as dt
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            # Query for 2026-01-15 only (should get 2 records)
+            rows = conn.execute(
+                "SELECT transaction_id FROM transactions "
+                "WHERE transaction_date = ?",
+                [dt.date(2026, 1, 15)],
+            ).fetchall()
+            assert len(rows) == 2
+
+            # Query for 2026-01-16 (should get 2 records)
+            rows = conn.execute(
+                "SELECT transaction_id FROM transactions "
+                "WHERE transaction_date = ?",
+                [dt.date(2026, 1, 16)],
+            ).fetchall()
+            assert len(rows) == 2
+
+            # Query for 2026-01-17 (should get 1 record)
+            rows = conn.execute(
+                "SELECT transaction_id FROM transactions "
+                "WHERE transaction_date = ?",
+                [dt.date(2026, 1, 17)],
+            ).fetchall()
+            assert len(rows) == 1
+        finally:
+            conn.close()
+
+    def test_date_range_between_query(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+        sample_transactions_df: pl.DataFrame,
+    ) -> None:
+        """Given multi-date records, BETWEEN query filters correctly."""
+        _write_parquet(tmp_source_dir, "txns.parquet", sample_transactions_df)
+        run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        import datetime as dt
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            # Range query: 2026-01-15 to 2026-01-16 (should get 4 records)
+            rows = conn.execute(
+                "SELECT COUNT(*) FROM transactions "
+                "WHERE transaction_date BETWEEN ? AND ?",
+                [dt.date(2026, 1, 15), dt.date(2026, 1, 16)],
+            ).fetchone()
+            assert rows[0] == 4
+
+            # Range query: entire span
+            rows = conn.execute(
+                "SELECT COUNT(*) FROM transactions "
+                "WHERE transaction_date BETWEEN ? AND ?",
+                [dt.date(2026, 1, 15), dt.date(2026, 1, 17)],
+            ).fetchone()
+            assert rows[0] == 5
+
+            # Range query: date with no records
+            rows = conn.execute(
+                "SELECT COUNT(*) FROM transactions "
+                "WHERE transaction_date = ?",
+                [dt.date(2026, 1, 14)],
+            ).fetchone()
+            assert rows[0] == 0
+        finally:
+            conn.close()
+
+    def test_date_column_aggregation(
+        self,
+        tmp_source_dir: Path,
+        tmp_db_path: Path,
+        sample_transactions_df: pl.DataFrame,
+    ) -> None:
+        """Given ingested records, GROUP BY transaction_date produces correct counts."""
+        _write_parquet(tmp_source_dir, "txns.parquet", sample_transactions_df)
+        run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+
+        conn = duckdb.connect(str(tmp_db_path))
+        try:
+            rows = conn.execute(
+                "SELECT transaction_date, COUNT(*) as cnt, SUM(amount) as total "
+                "FROM transactions "
+                "GROUP BY transaction_date "
+                "ORDER BY transaction_date"
+            ).fetchall()
+            assert len(rows) == 3
+            # 2026-01-15: 2 records
+            assert rows[0][1] == 2
+            # 2026-01-16: 2 records
+            assert rows[1][1] == 2
+            # 2026-01-17: 1 record
+            assert rows[2][1] == 1
+        finally:
+            conn.close()

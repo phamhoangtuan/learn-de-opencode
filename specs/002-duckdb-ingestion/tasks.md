@@ -144,13 +144,13 @@
 
 ### Tests for User Story 5
 
-- [ ] T042 [P] [US5] Write unit tests for transaction_date column derivation in `tests/unit/test_pipeline.py`
-- [ ] T043 [US5] Write integration test for date-range query efficiency in `tests/integration/test_pipeline.py`
+- [x] T042 [P] [US5] Write unit tests for transaction_date column derivation in `tests/unit/test_pipeline.py`
+- [x] T043 [US5] Write integration test for date-range query efficiency in `tests/integration/test_pipeline.py`
 
 ### Implementation for User Story 5
 
-- [ ] T044 [US5] Implement transaction_date column derivation (extract DATE from timestamp) in `src/ingestion/pipeline.py`
-- [ ] T045 [US5] Update DuckDB table schema to include transaction_date column in `src/ingestion/loader.py`
+- [x] T044 [US5] Implement transaction_date column derivation (extract DATE from timestamp) in `src/ingestion/pipeline.py`
+- [x] T045 [US5] Update DuckDB table schema to include transaction_date column in `src/ingestion/loader.py`
 
 **Checkpoint**: Warehouse data is queryable by date. Date-range queries filter efficiently.
 
