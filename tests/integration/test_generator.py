@@ -364,3 +364,75 @@ class TestReproducibility:
         assert "seed" in metadata
         assert isinstance(metadata["seed"], int)
         assert metadata["seed"] >= 0
+
+
+class TestChunkedGeneration:
+    """Tests for streaming/chunked writes for large datasets (T032)."""
+
+    def test_chunked_generation_produces_correct_count(
+        self, tmp_output_dir: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Chunked mode must produce exactly the requested record count."""
+        import src.generate_transactions as gt
+
+        monkeypatch.setattr(gt, "CHUNK_THRESHOLD", 500)
+        monkeypatch.setattr(gt, "CHUNK_SIZE", 200)
+
+        exit_code = main([
+            "--count", "750",
+            "--seed", "42",
+            "--output-dir", str(tmp_output_dir),
+        ])
+        assert exit_code == 0
+
+        files = list(tmp_output_dir.glob("transactions_*.parquet"))
+        df = pl.read_parquet(files[0])
+        assert len(df) == 750
+
+    def test_chunked_csv_output(
+        self, tmp_output_dir: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Chunked CSV mode must produce correct output."""
+        import src.generate_transactions as gt
+
+        monkeypatch.setattr(gt, "CHUNK_THRESHOLD", 300)
+        monkeypatch.setattr(gt, "CHUNK_SIZE", 100)
+
+        exit_code = main([
+            "--count", "350",
+            "--seed", "42",
+            "--format", "csv",
+            "--output-dir", str(tmp_output_dir),
+        ])
+        assert exit_code == 0
+
+        files = list(tmp_output_dir.glob("transactions_*.csv"))
+        df = pl.read_csv(files[0])
+        assert len(df) == 350
+
+    def test_chunked_preserves_schema(
+        self, tmp_output_dir: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Chunked output must have all 9 required fields."""
+        import src.generate_transactions as gt
+
+        monkeypatch.setattr(gt, "CHUNK_THRESHOLD", 200)
+        monkeypatch.setattr(gt, "CHUNK_SIZE", 100)
+
+        main([
+            "--count", "300",
+            "--seed", "42",
+            "--output-dir", str(tmp_output_dir),
+        ])
+
+        files = list(tmp_output_dir.glob("transactions_*.parquet"))
+        df = pl.read_parquet(files[0])
+
+        required_fields = {
+            "transaction_id", "timestamp", "amount", "currency",
+            "merchant_name", "category", "account_id",
+            "transaction_type", "status",
+        }
+        assert set(df.columns) == required_fields
+        for col in df.columns:
+            assert df[col].null_count() == 0
