@@ -273,3 +273,94 @@ class TestParameterCombinations:
         captured = capsys.readouterr()
         metadata = json.loads(captured.out)
         assert metadata["accounts"] == 5
+
+
+class TestReproducibility:
+    """T028: Integration tests for reproducible generation (US3)."""
+
+    def test_same_seed_produces_identical_output(
+        self, tmp_path: Path,
+    ) -> None:
+        """Two runs with the same seed must produce identical DataFrames."""
+        dir1 = tmp_path / "run1"
+        dir2 = tmp_path / "run2"
+        dir1.mkdir()
+        dir2.mkdir()
+
+        main([
+            "--count", "500",
+            "--seed", "42",
+            "--start-date", "2025-01-01",
+            "--end-date", "2025-06-30",
+            "--accounts", "20",
+            "--output-dir", str(dir1),
+        ])
+        main([
+            "--count", "500",
+            "--seed", "42",
+            "--start-date", "2025-01-01",
+            "--end-date", "2025-06-30",
+            "--accounts", "20",
+            "--output-dir", str(dir2),
+        ])
+
+        files1 = list(dir1.glob("transactions_*.parquet"))
+        files2 = list(dir2.glob("transactions_*.parquet"))
+        df1 = pl.read_parquet(files1[0])
+        df2 = pl.read_parquet(files2[0])
+
+        assert df1.equals(df2), (
+            "Same seed + same params must produce identical DataFrames"
+        )
+
+    def test_different_seeds_produce_different_output(
+        self, tmp_path: Path,
+    ) -> None:
+        """Different seeds must produce different DataFrames."""
+        dir1 = tmp_path / "run1"
+        dir2 = tmp_path / "run2"
+        dir1.mkdir()
+        dir2.mkdir()
+
+        main([
+            "--count", "100",
+            "--seed", "42",
+            "--start-date", "2025-01-01",
+            "--end-date", "2025-06-30",
+            "--output-dir", str(dir1),
+        ])
+        main([
+            "--count", "100",
+            "--seed", "99",
+            "--start-date", "2025-01-01",
+            "--end-date", "2025-06-30",
+            "--output-dir", str(dir2),
+        ])
+
+        files1 = list(dir1.glob("transactions_*.parquet"))
+        files2 = list(dir2.glob("transactions_*.parquet"))
+        df1 = pl.read_parquet(files1[0])
+        df2 = pl.read_parquet(files2[0])
+
+        assert not df1.equals(df2), (
+            "Different seeds must produce different DataFrames"
+        )
+
+    def test_auto_generated_seed_logged_in_metadata(
+        self,
+        tmp_output_dir: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """When no seed provided, generated seed must appear in metadata."""
+        import json
+
+        main([
+            "--count", "50",
+            "--output-dir", str(tmp_output_dir),
+        ])
+
+        captured = capsys.readouterr()
+        metadata = json.loads(captured.out)
+        assert "seed" in metadata
+        assert isinstance(metadata["seed"], int)
+        assert metadata["seed"] >= 0

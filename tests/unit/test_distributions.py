@@ -88,3 +88,58 @@ class TestGenerateAmounts:
         a1 = generate_amounts(np.random.default_rng(42), 100, currencies)
         a2 = generate_amounts(np.random.default_rng(42), 100, currencies)
         np.testing.assert_array_equal(a1, a2)
+
+
+class TestSeedPropagation:
+    """T029: Verify seed controls NumPy RNG and Faker output (US3)."""
+
+    def test_numpy_rng_deterministic_with_seed(self) -> None:
+        """Same seed must produce identical NumPy random sequences."""
+        rng1 = np.random.default_rng(42)
+        rng2 = np.random.default_rng(42)
+        vals1 = rng1.random(100)
+        vals2 = rng2.random(100)
+        np.testing.assert_array_equal(vals1, vals2)
+
+    def test_different_seeds_produce_different_output(self) -> None:
+        """Different seeds must produce different NumPy sequences."""
+        currencies = np.array(["USD"] * 100)
+        a1 = generate_amounts(np.random.default_rng(42), 100, currencies)
+        a2 = generate_amounts(np.random.default_rng(99), 100, currencies)
+        assert not np.array_equal(a1, a2)
+
+    def test_faker_seed_deterministic(self) -> None:
+        """Same Faker seed must produce identical names."""
+        from faker import Faker
+
+        Faker.seed(42)
+        fake1 = Faker()
+        names1 = [fake1.name() for _ in range(10)]
+
+        Faker.seed(42)
+        fake2 = Faker()
+        names2 = [fake2.name() for _ in range(10)]
+
+        assert names1 == names2
+
+    def test_account_generation_deterministic(self) -> None:
+        """Same seed must produce identical accounts."""
+        from src.models.account import generate_accounts
+
+        rng1 = np.random.default_rng(42)
+        rng2 = np.random.default_rng(42)
+        accounts1 = generate_accounts(rng1, 10, seed=42)
+        accounts2 = generate_accounts(rng2, 10, seed=42)
+
+        for a1, a2 in zip(accounts1, accounts2, strict=True):
+            assert a1.account_id == a2.account_id
+            assert a1.account_holder == a2.account_holder
+            assert a1.account_type == a2.account_type
+
+    def test_transaction_ids_deterministic(self) -> None:
+        """Same seed must produce identical transaction IDs."""
+        from src.models.transaction import generate_transaction_ids
+
+        ids1 = generate_transaction_ids(np.random.default_rng(42), 20)
+        ids2 = generate_transaction_ids(np.random.default_rng(42), 20)
+        assert ids1 == ids2
