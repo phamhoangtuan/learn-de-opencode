@@ -141,3 +141,73 @@ class TestValidateParams:
         error = next(e for e in result if e.field == "count")
         assert "-5" in error.message
         assert "0" in error.message
+
+
+class TestEdgeCaseValidation:
+    """T024: Edge case validation tests (US2)."""
+
+    def test_count_one_accepted(self) -> None:
+        """count=1 must be accepted as a valid boundary value."""
+        result = validate_params(
+            count=1, start_date=None, end_date=None,
+            accounts=1, output_format="parquet", seed=42,
+        )
+        assert isinstance(result, ValidatedParams)
+        assert result.count == 1
+
+    def test_accounts_exceeding_count_capped(self) -> None:
+        """Accounts > count must be silently capped to count."""
+        result = validate_params(
+            count=5, start_date=None, end_date=None,
+            accounts=500, output_format="parquet", seed=42,
+        )
+        assert isinstance(result, ValidatedParams)
+        assert result.accounts == 5
+
+    def test_same_day_range_accepted(self) -> None:
+        """Same start and end date (single day range) must be valid."""
+        result = validate_params(
+            count=100, start_date="2025-03-15", end_date="2025-03-15",
+            accounts=10, output_format="parquet", seed=42,
+        )
+        assert isinstance(result, ValidatedParams)
+        assert result.start_date == date(2025, 3, 15)
+        assert result.end_date == date(2025, 3, 15)
+
+    def test_end_date_before_start_error_message(self) -> None:
+        """Date range error must clearly state the invalid dates."""
+        result = validate_params(
+            count=100, start_date="2025-12-31", end_date="2025-01-01",
+            accounts=10, output_format="parquet", seed=42,
+        )
+        assert isinstance(result, list)
+        error = next(e for e in result if e.field == "date_range")
+        assert "2025-12-31" in error.message
+        assert "2025-01-01" in error.message
+
+    def test_negative_accounts_rejected(self) -> None:
+        """Negative account count must return a validation error."""
+        result = validate_params(
+            count=100, start_date=None, end_date=None,
+            accounts=-1, output_format="parquet", seed=42,
+        )
+        assert isinstance(result, list)
+        assert any(e.field == "accounts" for e in result)
+
+    def test_very_large_count_accepted(self) -> None:
+        """Very large counts must be accepted without validation error."""
+        result = validate_params(
+            count=10_000_000, start_date=None, end_date=None,
+            accounts=1000, output_format="parquet", seed=42,
+        )
+        assert isinstance(result, ValidatedParams)
+        assert result.count == 10_000_000
+
+    def test_csv_format_accepted(self) -> None:
+        """CSV format must be accepted as valid."""
+        result = validate_params(
+            count=100, start_date=None, end_date=None,
+            accounts=10, output_format="csv", seed=42,
+        )
+        assert isinstance(result, ValidatedParams)
+        assert result.format == "csv"

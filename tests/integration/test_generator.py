@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import polars as pl
@@ -46,7 +47,9 @@ class TestEndToEndGeneration:
         }
         assert set(df.columns) == required_fields
 
-    def test_no_null_values_in_required_fields(self, tmp_output_dir: Path) -> None:
+    def test_no_null_values_in_required_fields(
+        self, tmp_output_dir: Path,
+    ) -> None:
         """No required field may contain null values per SC-002."""
         main([
             "--count", "500",
@@ -91,7 +94,9 @@ class TestEndToEndGeneration:
         df = pl.read_csv(files[0])
         assert len(df) == 100
 
-    def test_zero_records_produces_empty_file_with_schema(self, tmp_output_dir: Path) -> None:
+    def test_zero_records_produces_empty_file_with_schema(
+        self, tmp_output_dir: Path,
+    ) -> None:
         """Zero record count must produce file with headers but no data rows."""
         main([
             "--count", "0",
@@ -123,3 +128,148 @@ class TestEndToEndGeneration:
         assert metadata["seed"] == 42
         assert "output_path" in metadata
         assert "duration_seconds" in metadata
+
+
+class TestParameterCombinations:
+    """T023: Integration tests for parameter combinations (US2)."""
+
+    def test_date_range_filtering(self, tmp_output_dir: Path) -> None:
+        """All timestamps must fall within the configured date range per FR-003."""
+        main([
+            "--count", "500",
+            "--seed", "42",
+            "--start-date", "2025-06-01",
+            "--end-date", "2025-06-30",
+            "--output-dir", str(tmp_output_dir),
+        ])
+
+        files = list(tmp_output_dir.glob("transactions_*.parquet"))
+        df = pl.read_parquet(files[0])
+
+        start_dt = datetime(2025, 6, 1, tzinfo=UTC)
+        end_dt = datetime(2025, 6, 30, 23, 59, 59, tzinfo=UTC)
+
+        timestamps = df["timestamp"].to_list()
+        for ts in timestamps:
+            assert ts >= start_dt, (
+                f"Timestamp {ts} is before start {start_dt}"
+            )
+            assert ts <= end_dt, (
+                f"Timestamp {ts} is after end {end_dt}"
+            )
+
+    def test_same_day_range_produces_valid_timestamps(
+        self, tmp_output_dir: Path,
+    ) -> None:
+        """Same start and end date must produce timestamps within that day."""
+        main([
+            "--count", "100",
+            "--seed", "42",
+            "--start-date", "2025-07-15",
+            "--end-date", "2025-07-15",
+            "--output-dir", str(tmp_output_dir),
+        ])
+
+        files = list(tmp_output_dir.glob("transactions_*.parquet"))
+        df = pl.read_parquet(files[0])
+
+        assert len(df) == 100
+        timestamps = df["timestamp"].to_list()
+        for ts in timestamps:
+            assert ts.date() == date(2025, 7, 15), (
+                f"Timestamp {ts} not on expected date 2025-07-15"
+            )
+
+    def test_account_count_accuracy(self, tmp_output_dir: Path) -> None:
+        """Output must contain exactly N distinct account IDs per FR-004."""
+        main([
+            "--count", "500",
+            "--seed", "42",
+            "--accounts", "25",
+            "--output-dir", str(tmp_output_dir),
+        ])
+
+        files = list(tmp_output_dir.glob("transactions_*.parquet"))
+        df = pl.read_parquet(files[0])
+
+        distinct_accounts = df["account_id"].n_unique()
+        assert distinct_accounts == 25, (
+            f"Expected 25 distinct accounts, got {distinct_accounts}"
+        )
+
+    def test_large_count_handling(self, tmp_output_dir: Path) -> None:
+        """Large record counts (50k) must complete successfully."""
+        exit_code = main([
+            "--count", "50000",
+            "--seed", "42",
+            "--accounts", "200",
+            "--output-dir", str(tmp_output_dir),
+        ])
+        assert exit_code == 0
+
+        files = list(tmp_output_dir.glob("transactions_*.parquet"))
+        df = pl.read_parquet(files[0])
+        assert len(df) == 50000
+        assert df["account_id"].n_unique() == 200
+
+    def test_csv_with_custom_params(self, tmp_output_dir: Path) -> None:
+        """CSV output with custom parameters must be correctly applied."""
+        main([
+            "--count", "200",
+            "--seed", "99",
+            "--accounts", "10",
+            "--format", "csv",
+            "--start-date", "2025-01-01",
+            "--end-date", "2025-12-31",
+            "--output-dir", str(tmp_output_dir),
+        ])
+
+        files = list(tmp_output_dir.glob("transactions_*.csv"))
+        assert len(files) == 1
+        df = pl.read_csv(files[0])
+        assert len(df) == 200
+        assert df["account_id"].n_unique() == 10
+
+    def test_single_record_boundary(self, tmp_output_dir: Path) -> None:
+        """count=1 must produce exactly one valid record."""
+        exit_code = main([
+            "--count", "1",
+            "--seed", "42",
+            "--accounts", "1",
+            "--output-dir", str(tmp_output_dir),
+        ])
+        assert exit_code == 0
+
+        files = list(tmp_output_dir.glob("transactions_*.parquet"))
+        df = pl.read_parquet(files[0])
+        assert len(df) == 1
+        assert df["account_id"].n_unique() == 1
+        # Verify all fields present and non-null
+        for col in df.columns:
+            assert df[col].null_count() == 0
+
+    def test_accounts_capped_at_count_with_warning(
+        self,
+        tmp_output_dir: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Accounts exceeding count must be capped, with warning logged."""
+        import json
+
+        exit_code = main([
+            "--count", "5",
+            "--seed", "42",
+            "--accounts", "100",
+            "--output-dir", str(tmp_output_dir),
+        ])
+        assert exit_code == 0
+
+        files = list(tmp_output_dir.glob("transactions_*.parquet"))
+        df = pl.read_parquet(files[0])
+        # Accounts capped to transaction count
+        assert df["account_id"].n_unique() <= 5
+
+        # Metadata should reflect capped account count
+        captured = capsys.readouterr()
+        metadata = json.loads(captured.out)
+        assert metadata["accounts"] == 5
