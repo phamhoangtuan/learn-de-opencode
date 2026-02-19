@@ -3,6 +3,9 @@
 Auto-generated from all feature plans. Last updated: 2026-02-18
 
 ## Active Technologies
+- Python 3.11+ + DuckDB (SQL-based data quality checks, severity levels, metadata tracking) (004-data-quality-checks)
+- DuckDB SQL checks: violation-based convention, check_runs + check_results metadata in `data/warehouse/transactions.duckdb` (004-data-quality-checks)
+
 - Python 3.11+ + DuckDB (SQL transforms, DAG resolution, metadata tracking) (003-sql-transformations)
 - DuckDB SQL transforms: staging views + mart aggregate tables in `data/warehouse/transactions.duckdb` (003-sql-transformations)
 
@@ -27,6 +30,8 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.11+: Follow standard conventions
 
 ## Recent Changes
+- 004-data-quality-checks: Added Python 3.11+ + DuckDB (SQL-based data quality checks, severity levels, metadata tracking). Run checks: `uv run src/run_checks.py`
+
 - 003-sql-transformations: Added Python 3.11+ + DuckDB (SQL transforms, DAG resolution, metadata tracking). Run transforms: `uv run src/run_transforms.py`
 
 - 002-duckdb-ingestion: Added Python 3.11+ + Polars (Parquet read, validation, dedup), DuckDB (warehouse storage, SQL queries), NumPy (inherited from Feature 001)

@@ -1,6 +1,6 @@
 # learn_de - Data Engineering Learning Project
 
-A production-style data engineering project built with Python, Polars, and DuckDB. Generates realistic synthetic financial transaction data, ingests it into a local analytical warehouse with schema validation, deduplication, and lineage tracking, then transforms it into curated staging views and analytical mart tables using a lightweight dbt-inspired SQL runner.
+A production-style data engineering project built with Python, Polars, and DuckDB. Generates realistic synthetic financial transaction data, ingests it into a local analytical warehouse with schema validation, deduplication, and lineage tracking, transforms it into curated staging views and analytical mart tables using a lightweight dbt-inspired SQL runner, and validates data quality through automated SQL-based checks.
 
 ## Prerequisites
 
@@ -100,7 +100,37 @@ Transform Run Summary (abc123...):
 
 All transforms use `CREATE OR REPLACE` patterns, making re-runs fully idempotent. Each execution is tracked in a `transform_runs` metadata table.
 
-### 4. Query the Warehouse
+### 4. Run Data Quality Checks
+
+```bash
+uv run src/run_checks.py
+```
+
+This discovers all SQL check files in `src/checks/`, executes each against the DuckDB warehouse, and reports pass/fail/error with severity levels.
+
+**Check options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--db-path` | data/warehouse/transactions.duckdb | Path to DuckDB database |
+| `--checks-dir` | src/checks | Directory containing .sql check files |
+| `--verbose` | off | Enable debug-level logging |
+
+The runner outputs a summary:
+
+```
+Check Run Summary (abc123...):
+  Status:          passed
+  Total checks:    6
+  Passed:          6
+  Failed:          0
+  Errored:         0
+  Elapsed time:    0.03s
+```
+
+Exit code is 1 only when a **critical** check fails. Warn-only failures exit with 0.
+
+### 5. Query the Warehouse
 
 ```python
 import duckdb
@@ -139,6 +169,16 @@ conn.sql("SELECT * FROM ingestion_runs ORDER BY started_at DESC").show()
 # Review transform run history
 conn.sql("SELECT * FROM transform_runs ORDER BY started_at DESC").show()
 
+# Review check run history
+conn.sql("SELECT * FROM check_runs ORDER BY started_at DESC").show()
+
+# Review individual check results for the latest run
+conn.sql("""
+    SELECT check_name, severity, status, violation_count
+    FROM check_results
+    WHERE run_id = (SELECT run_id FROM check_runs ORDER BY started_at DESC LIMIT 1)
+""").show()
+
 conn.close()
 ```
 
@@ -153,6 +193,8 @@ conn.close()
 - **SQL transformations** -- dbt-inspired staging views and mart tables with DAG-based dependency resolution
 - **Idempotent transforms** -- all SQL uses `CREATE OR REPLACE` for safe re-runs
 - **Transform metadata** -- every transform execution tracked in `transform_runs` table
+- **Data quality checks** -- dbt-inspired SQL-based checks with severity levels (critical/warn), violation sampling, and exit code control
+- **Check metadata** -- every check run tracked in `check_runs` and `check_results` tables
 
 ## Data Model
 
@@ -218,6 +260,32 @@ Only includes completed transactions. Grain: (month, account_id, currency).
 
 **`transform_runs`** -- transform execution history with model counts and timing
 
+**`check_runs`** -- check-runner execution history with aggregate outcomes
+| Column | Type | Description |
+|--------|------|-------------|
+| run_id | VARCHAR (PK) | UUID for the check run |
+| started_at | TIMESTAMPTZ | When the run started |
+| completed_at | TIMESTAMPTZ | When the run finished |
+| status | VARCHAR | Overall status: passed, warn, failed, error |
+| total_checks | INTEGER | Number of checks discovered |
+| checks_passed | INTEGER | Number that passed |
+| checks_failed | INTEGER | Number that failed |
+| checks_errored | INTEGER | Number that errored |
+| elapsed_seconds | DOUBLE | Total wall-clock time |
+
+**`check_results`** -- per-check results for each run
+| Column | Type | Description |
+|--------|------|-------------|
+| id | VARCHAR (PK) | UUID for this result row |
+| run_id | VARCHAR (FK) | Links to check_runs.run_id |
+| check_name | VARCHAR | Check name from SQL header or filename |
+| severity | VARCHAR | `critical` or `warn` |
+| description | VARCHAR | Human-readable description |
+| status | VARCHAR | `pass`, `fail`, or `error` |
+| violation_count | INTEGER | Number of violating rows |
+| sample_violations | VARCHAR | JSON of up to 5 violating rows |
+| elapsed_seconds | DOUBLE | Execution time for this check |
+
 ## Running Tests
 
 ```bash
@@ -246,6 +314,7 @@ src/
   generate_transactions.py        # CLI: synthetic data generator
   ingest_transactions.py          # CLI: ingestion pipeline
   run_transforms.py               # CLI: SQL transform runner
+  run_checks.py                   # CLI: data quality check runner
   ingestion/
     pipeline.py                   # Pipeline orchestration
     validator.py                  # Schema + value validation
@@ -261,6 +330,17 @@ src/
     staging__stg_transactions.sql           # Staging view
     mart__daily_spend_by_category.sql       # Daily spend mart
     mart__monthly_account_summary.sql       # Monthly summary mart
+  checker/
+    runner.py                     # Check orchestration + metadata
+    parser.py                     # SQL check file parser (check/severity headers)
+    models.py                     # Domain models (CheckModel, CheckResult, etc.)
+  checks/
+    check__row_count_staging.sql            # Completeness: staging = source
+    check__mart_not_empty.sql               # Completeness: marts have rows
+    check__freshness.sql                    # Timeliness: data within 48h
+    check__unique_daily_spend_grain.sql     # Uniqueness: daily spend grain
+    check__unique_monthly_summary_grain.sql # Uniqueness: monthly summary grain
+    check__accepted_values_currency.sql     # Validity: allowed currencies
   models/                         # Transaction schema (Feature 001)
   lib/                            # Shared utilities
 
