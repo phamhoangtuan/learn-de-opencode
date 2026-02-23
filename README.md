@@ -130,7 +130,29 @@ Check Run Summary (abc123...):
 
 Exit code is 1 only when a **critical** check fails. Warn-only failures exit with 0.
 
-### 5. Query the Warehouse
+### 5. Launch the Dashboard
+
+```bash
+cd dashboard && npm run dev
+```
+
+This starts an [Evidence.dev](https://evidence.dev) dashboard at `http://localhost:3000` with four interactive pages:
+
+- **Pipeline Overview** -- at-a-glance summary cards for latest ingestion, transform, and check runs, plus a combined timeline
+- **Financial Analytics** -- daily spend by category charts, monthly account summaries, top merchants, and currency breakdowns
+- **Ingestion Health** -- per-run metrics (records loaded, quarantined, duplicates), run history table, and records trend
+- **Data Quality** -- latest check run results, per-check status with severity and violations, and outcomes over time
+
+The dashboard connects to the DuckDB warehouse in read-only mode -- it never modifies your data. Make sure you have run steps 1-4 first to populate the warehouse.
+
+**Prerequisites**: Node.js 18+ and npm 7+.
+
+```bash
+# First-time setup
+cd dashboard && npm install
+```
+
+### 6. Query the Warehouse
 
 ```python
 import duckdb
@@ -195,6 +217,7 @@ conn.close()
 - **Transform metadata** -- every transform execution tracked in `transform_runs` table
 - **Data quality checks** -- dbt-inspired SQL-based checks with severity levels (critical/warn), violation sampling, and exit code control
 - **Check metadata** -- every check run tracked in `check_runs` and `check_results` tables
+- **Interactive dashboard** -- Evidence.dev dashboard with financial analytics, pipeline health, and data quality pages
 
 ## Data Model
 
@@ -349,6 +372,15 @@ tests/
   integration/                    # End-to-end pipeline tests
   quality/                        # Data quality validation (6Cs)
 
+dashboard/                          # Evidence.dev dashboard (Feature 005)
+  pages/
+    index.md                      # Pipeline overview (home page)
+    financial-analytics.md        # Financial analytics
+    ingestion-health.md           # Ingestion health monitoring
+    data-quality.md               # Data quality check results
+  sources/
+    warehouse/                    # DuckDB source connection + queries
+
 specs/                            # Feature specifications
 data/
   raw/                            # Source Parquet files (gitignored)
@@ -366,3 +398,4 @@ data/
 - **pytest** -- testing framework
 - **ruff** -- linting and formatting
 - **uv** -- dependency management
+- **Evidence.dev** -- SQL-based interactive dashboard framework
