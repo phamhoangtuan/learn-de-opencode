@@ -3,6 +3,9 @@
 Auto-generated from all feature plans. Last updated: 2026-02-18
 
 ## Active Technologies
+- Evidence.dev + DuckDB (interactive dashboard, read-only connection to warehouse) (005-evidence-dashboard)
+- Dashboard pages: pipeline overview, financial analytics, ingestion health, data quality in `dashboard/` (005-evidence-dashboard)
+
 - Python 3.11+ + DuckDB (SQL-based data quality checks, severity levels, metadata tracking) (004-data-quality-checks)
 - DuckDB SQL checks: violation-based convention, check_runs + check_results metadata in `data/warehouse/transactions.duckdb` (004-data-quality-checks)
 
@@ -30,6 +33,8 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.11+: Follow standard conventions
 
 ## Recent Changes
+- 005-evidence-dashboard: Added Evidence.dev + DuckDB (interactive dashboard, read-only connection to warehouse). Start dashboard: `cd dashboard && npm run dev`
+
 - 004-data-quality-checks: Added Python 3.11+ + DuckDB (SQL-based data quality checks, severity levels, metadata tracking). Run checks: `uv run src/run_checks.py`
 
 - 003-sql-transformations: Added Python 3.11+ + DuckDB (SQL transforms, DAG resolution, metadata tracking). Run transforms: `uv run src/run_transforms.py`
