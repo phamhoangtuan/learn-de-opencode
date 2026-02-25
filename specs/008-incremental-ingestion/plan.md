@@ -59,7 +59,7 @@ src/
 │   ├── manifest.py          # NEW — ManifestStore, ManifestEntry, compute_file_hash
 │   ├── pipeline.py          # MODIFIED — wrap file loop with manifest filter + two-phase commit
 │   ├── models.py            # MODIFIED — extend RunResult with manifest stats
-│   ├── loader.py            # UNCHANGED
+│   ├── loader.py            # MODIFIED — add file_manifest/manifest_metadata DDL, extend complete_run()
 │   ├── validator.py         # UNCHANGED
 │   └── dedup.py             # UNCHANGED
 ├── ingest_transactions.py   # MODIFIED — add --full-refresh CLI flag
@@ -104,7 +104,9 @@ manifest.update_watermark()     ← new: advance watermark to max mtime of succe
 
 The `--full-refresh` flag bypasses the mtime and hash checks: all files are
 treated as pending (manifest entries are reset to `pending` in bulk before
-the loop begins).
+the loop begins). The `manifest_metadata` watermark row is deleted (not set
+to NULL, which would violate the `NOT NULL` constraint) so `get_watermark()`
+returns `None` and all files pass the mtime pre-filter.
 
 ---
 
@@ -155,8 +157,18 @@ Executes DDL for `file_manifest` and `manifest_metadata` if they do not exist
 ```sql
 SELECT watermark_mtime FROM manifest_metadata WHERE source_dir = ?
 ```
-Returns `None` if no watermark has been recorded yet (first run or
-`--full-refresh` reset).
+Returns `None` if no watermark has been recorded yet (first run or after
+`--full-refresh` deletes the row).
+
+#### `delete_watermark(source_dir: str) -> None`
+
+```sql
+DELETE FROM manifest_metadata WHERE source_dir = ?
+```
+Called by `run_pipeline()` when `full_refresh=True`, before the file loop.
+Deleting the row (rather than setting `watermark_mtime = NULL`, which would
+violate the `NOT NULL` constraint) causes `get_watermark()` to return `None`
+and forces all files to pass the mtime pre-filter (C-003 resolution).
 
 #### `update_watermark(source_dir: str, mtime: float) -> None`
 
@@ -175,7 +187,7 @@ SELECT * FROM file_manifest WHERE file_path = ?
 ```
 Returns `None` if the file has never been ingested.
 
-#### `upsert_pending(entry: ManifestEntry) -> None`
+#### `upsert_pending(file_path: str, file_hash: str, file_size_bytes: int, file_mtime: float, run_id: str) -> None`
 
 Two-phase commit phase 1 (FR-012, Clarification Q5). Writes the entry with
 `status = 'pending'` and current `run_id` before ingestion begins.

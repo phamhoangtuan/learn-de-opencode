@@ -49,7 +49,7 @@
 - [ ] CHK022 `run_pipeline` signature extended with `full_refresh: bool = False` keyword argument
 - [ ] CHK023 `reset_all_to_pending(run_id)` is called at the start of the run (before file loop) when `full_refresh=True`
 - [ ] CHK024 `reset_all_to_pending()` issues a bulk `UPDATE file_manifest SET status = 'pending', run_id = ?, error_message = NULL` — does NOT delete and reinsert rows (Clarification Q3)
-- [ ] CHK025 Watermark is reset to `NULL` (or `manifest_metadata` row is deleted/zeroed) on `--full-refresh` to force re-evaluation of all file mtimes
+- [ ] CHK025 On `--full-refresh`, the `manifest_metadata` row for `source_dir` is **deleted** (not set to NULL — `watermark_mtime DOUBLE NOT NULL` forbids it) so `get_watermark()` returns `None` and all files pass the mtime pre-filter (C-003 resolution)
 - [ ] CHK026 Full refresh reprocesses ALL files in `source_dir` regardless of their current manifest state
 - [ ] CHK027 Files with no existing manifest entry during full refresh are handled identically to first-time ingestion (INSERT with `pending`)
 
@@ -74,14 +74,14 @@
 - [ ] CHK037 `update_watermark()` is called after the file processing loop with the maximum `st_mtime` across all **successfully ingested** files in the current run
 - [ ] CHK038 `update_watermark()` uses INSERT … ON CONFLICT DO UPDATE to upsert the watermark row for the `source_dir`
 - [ ] CHK039 Watermark is read from DuckDB at pipeline startup (not from in-memory state), ensuring correctness across process restarts (US5 scenario 3)
-- [ ] CHK040 On `--full-refresh`, watermark in `manifest_metadata` is reset so all files are candidates for the mtime pre-filter check
+- [ ] CHK040 On `--full-refresh`, the `manifest_metadata` row for `source_dir` is deleted via `delete_watermark()` so all files are candidates for the mtime pre-filter check (mirrors CHK025)
 
 ---
 
 ## Section 7: Backward Compatibility
 
 - [ ] CHK041 All existing Feature 002 test files pass without modification after this feature is merged (SC-008, FR-013)
-- [ ] CHK042 `validator.py`, `dedup.py`, and `loader.py` are not modified (plan.md — "UNCHANGED")
+- [ ] CHK042 `validator.py` and `dedup.py` are not modified (plan.md — "UNCHANGED"); `loader.py` IS modified to add manifest DDL and extend `complete_run()` (C-001 resolution)
 - [ ] CHK043 Default `run_pipeline()` call (no `full_refresh` argument) behaves identically to pre-feature behavior for the first run — all files are discovered and processed
 - [ ] CHK044 `ingest_transactions.py` invoked without `--full-refresh` triggers incremental mode; no behavioral change for existing callers
 - [ ] CHK045 Existing DuckDB databases without the manifest tables are handled transparently: `CREATE TABLE IF NOT EXISTS` and `ALTER TABLE … ADD COLUMN IF NOT EXISTS` ensure no errors on upgrade
