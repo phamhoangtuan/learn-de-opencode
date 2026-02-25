@@ -70,6 +70,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="data/warehouse/transactions.duckdb",
         help="Path to DuckDB database file (default: data/warehouse/transactions.duckdb)",
     )
+    parser.add_argument(
+        "--full-refresh",
+        action="store_true",
+        default=False,
+        help=(
+            "Bypass the manifest and reprocess all files in the source directory. "
+            "Use to recover from a corrupted warehouse or force a clean reload."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -86,15 +95,17 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
 
     logger.info(
-        "Starting ingestion: source=%s, db=%s",
+        "Starting ingestion: source=%s, db=%s, full_refresh=%s",
         args.source_dir,
         args.db_path,
+        args.full_refresh,
     )
 
     try:
         result = run_pipeline(
             source_dir=args.source_dir,
             db_path=args.db_path,
+            full_refresh=args.full_refresh,
         )
     except Exception:
         logger.exception("Pipeline execution failed")

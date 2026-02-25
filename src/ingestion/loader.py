@@ -55,9 +55,44 @@ CREATE TABLE IF NOT EXISTS ingestion_runs (
     records_loaded      INTEGER NOT NULL DEFAULT 0,
     records_quarantined INTEGER NOT NULL DEFAULT 0,
     duplicates_skipped  INTEGER NOT NULL DEFAULT 0,
-    elapsed_seconds     DOUBLE
+    elapsed_seconds     DOUBLE,
+    files_checked       INTEGER NOT NULL DEFAULT 0,
+    files_skipped       INTEGER NOT NULL DEFAULT 0,
+    files_ingested      INTEGER NOT NULL DEFAULT 0,
+    files_failed        INTEGER NOT NULL DEFAULT 0
 );
 """
+
+# T001: file_manifest DDL — 8 columns with CHECK constraint on status
+_FILE_MANIFEST_DDL: str = """
+CREATE TABLE IF NOT EXISTS file_manifest (
+    file_path        VARCHAR PRIMARY KEY,
+    file_size_bytes  BIGINT NOT NULL,
+    file_hash        VARCHAR NOT NULL,
+    file_mtime       DOUBLE NOT NULL,
+    run_id           VARCHAR NOT NULL,
+    processed_at     TIMESTAMPTZ NOT NULL,
+    status           VARCHAR NOT NULL CHECK (status IN ('pending', 'success', 'failed')),
+    error_message    VARCHAR
+);
+"""
+
+# T002: manifest_metadata DDL — watermark table
+_MANIFEST_METADATA_DDL: str = """
+CREATE TABLE IF NOT EXISTS manifest_metadata (
+    source_dir       VARCHAR PRIMARY KEY,
+    watermark_mtime  DOUBLE NOT NULL,
+    updated_at       TIMESTAMPTZ NOT NULL
+);
+"""
+
+# T003b: Migration guards for existing databases that lack the new columns
+_INGESTION_RUNS_MIGRATION_DDLS: list[str] = [
+    "ALTER TABLE ingestion_runs ADD COLUMN IF NOT EXISTS files_checked  INTEGER DEFAULT 0;",
+    "ALTER TABLE ingestion_runs ADD COLUMN IF NOT EXISTS files_skipped  INTEGER DEFAULT 0;",
+    "ALTER TABLE ingestion_runs ADD COLUMN IF NOT EXISTS files_ingested INTEGER DEFAULT 0;",
+    "ALTER TABLE ingestion_runs ADD COLUMN IF NOT EXISTS files_failed   INTEGER DEFAULT 0;",
+]
 
 logger = logging.getLogger("ingest_transactions")
 
@@ -83,6 +118,9 @@ def create_tables(conn: duckdb.DuckDBPyConnection) -> None:
     Creates the transactions, quarantine, and ingestion_runs tables
     per FR-003. Safe to call multiple times (idempotent).
 
+    Also creates file_manifest and manifest_metadata tables (Feature 008)
+    and applies migration guards for existing ingestion_runs tables.
+
     Args:
         conn: An open DuckDB connection.
     """
@@ -90,6 +128,9 @@ def create_tables(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(_TRANSACTIONS_DDL)
     conn.execute(_QUARANTINE_DDL)
     conn.execute(_INGESTION_RUNS_DDL)
+    # T003b: Migration guards for existing databases
+    for migration_ddl in _INGESTION_RUNS_MIGRATION_DDLS:
+        conn.execute(migration_ddl)
     logger.info("Warehouse tables ready")
 
 
@@ -229,6 +270,10 @@ def complete_run(
     records_quarantined: int,
     duplicates_skipped: int,
     elapsed_seconds: float,
+    files_checked: int = 0,
+    files_skipped: int = 0,
+    files_ingested: int = 0,
+    files_failed: int = 0,
 ) -> None:
     """Update an ingestion_runs record upon pipeline completion.
 
@@ -242,6 +287,10 @@ def complete_run(
         records_quarantined: Total records sent to quarantine.
         duplicates_skipped: Total duplicate records skipped.
         elapsed_seconds: Total run duration in seconds.
+        files_checked: Total files discovered before manifest filter (Feature 008).
+        files_skipped: Files skipped by manifest (already ingested, same hash).
+        files_ingested: Files successfully ingested this run.
+        files_failed: Files that failed ingestion this run.
     """
     conn.execute(
         """
@@ -252,7 +301,11 @@ def complete_run(
             records_loaded = ?,
             records_quarantined = ?,
             duplicates_skipped = ?,
-            elapsed_seconds = ?
+            elapsed_seconds = ?,
+            files_checked = ?,
+            files_skipped = ?,
+            files_ingested = ?,
+            files_failed = ?
         WHERE run_id = ?
         """,
         [
@@ -263,6 +316,10 @@ def complete_run(
             records_quarantined,
             duplicates_skipped,
             elapsed_seconds,
+            files_checked,
+            files_skipped,
+            files_ingested,
+            files_failed,
             run_id,
         ],
     )
