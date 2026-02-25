@@ -3,6 +3,9 @@
 Auto-generated from all feature plans. Last updated: 2026-02-23
 
 ## Active Technologies
+- GitHub Actions CI/CD (lint + test + E2E pipeline on push/PR to main) (007-github-actions-cicd)
+- Workflow: `.github/workflows/ci.yml` — jobs: lint (ruff), test (pytest + md-report), pipeline (uv run src/run_pipeline.py --skip-steps dashboard) (007-github-actions-cicd)
+
 - Python 3.11+ + DuckDB (pipeline orchestration, DAG resolution, subprocess execution, metadata tracking) (006-pipeline-orchestration)
 - Pipeline orchestrator: `src/orchestrator/` module, `pipeline_runs` metadata table in `data/warehouse/transactions.duckdb` (006-pipeline-orchestration)
 
@@ -36,6 +39,8 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.11+: Follow standard conventions
 
 ## Recent Changes
+- 007-github-actions-cicd: Added GitHub Actions CI/CD workflow. Workflow at `.github/workflows/ci.yml` — triggers on push/PR to main, runs lint + test + E2E pipeline.
+
 - 006-pipeline-orchestration: Added Python 3.11+ + DuckDB (pipeline orchestration, DAG resolution, subprocess execution, metadata tracking). Run pipeline: `uv run src/run_pipeline.py`
 
 - 005-evidence-dashboard: Added Evidence.dev + DuckDB (interactive dashboard, read-only connection to warehouse). Start dashboard: `cd dashboard && npm run dev`

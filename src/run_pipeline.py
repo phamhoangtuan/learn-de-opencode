@@ -14,10 +14,11 @@ Wires all 5 pipeline steps into a single runnable DAG:
   5. dashboard  — Evidence dashboard source refresh
 
 Usage:
-    uv run src/run_pipeline.py                          # full pipeline
-    uv run src/run_pipeline.py --step transforms        # one step only
-    uv run src/run_pipeline.py --from-step transforms   # transforms onwards
-    uv run src/run_pipeline.py --dry-run                # print plan, no execution
+    uv run src/run_pipeline.py                              # full pipeline
+    uv run src/run_pipeline.py --step transforms            # one step only
+    uv run src/run_pipeline.py --from-step transforms       # transforms onwards
+    uv run src/run_pipeline.py --skip-steps dashboard       # skip dashboard (CI)
+    uv run src/run_pipeline.py --dry-run                    # print plan, no execution
 """
 
 from __future__ import annotations
@@ -128,6 +129,7 @@ def main() -> int:
             "  uv run src/run_pipeline.py\n"
             "  uv run src/run_pipeline.py --step transforms\n"
             "  uv run src/run_pipeline.py --from-step transforms\n"
+            "  uv run src/run_pipeline.py --skip-steps dashboard\n"
             "  uv run src/run_pipeline.py --dry-run\n"
             "\n"
             f"Available steps: {', '.join(_VALID_STEP_NAMES)}"
@@ -154,6 +156,12 @@ def main() -> int:
         help=f"Path to the DuckDB database (default: {DEFAULT_DB_PATH})",
     )
     parser.add_argument(
+        "--skip-steps",
+        metavar="NAMES",
+        default="",
+        help="Comma-separated step names to skip (e.g. --skip-steps dashboard)",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Enable debug-level logging to stderr",
@@ -177,6 +185,15 @@ def main() -> int:
     if args.from_step:
         _validate_step_name(args.from_step, "--from-step")
 
+    # Parse and validate --skip-steps
+    skip_step_names: set[str] = set()
+    if args.skip_steps:
+        for name in args.skip_steps.split(","):
+            name = name.strip()
+            if name:
+                _validate_step_name(name, "--skip-steps")
+                skip_step_names.add(name)
+
     db_path = args.db_path
 
     # Ensure metadata table exists (FR-013)
@@ -195,6 +212,7 @@ def main() -> int:
         PIPELINE_STEPS,
         step_name=args.step or None,
         from_step_name=args.from_step or None,
+        skip_step_names=skip_step_names or None,
         dry_run=args.dry_run,
         project_root=project_root,
     )
