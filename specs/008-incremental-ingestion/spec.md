@@ -149,3 +149,43 @@ As a data engineer, I want the pipeline to track a high-water mark representing 
 - The `ingestion_runs` table from Feature 002 remains the authoritative record of pipeline executions; the manifest is a subordinate tracking table that references it.
 - `--full-refresh` does not drop and recreate the warehouse tables; it only resets manifest entries and re-ingests files (deduplication logic still applies to warehouse records).
 - The watermark is reset to `NULL` on `--full-refresh` to force re-evaluation of all file mtimes.
+
+## Clarifications
+
+### Q1: Is the SHA-256 hash computed over raw file bytes or over parsed DataFrame content?
+
+**Ambiguity**: FR-002 specifies `file_hash (SHA-256)` and FR-003 says skip files without "reading the file's contents," but hash computation inherently requires reading the file. It is unclear whether the hash is computed by streaming raw bytes (before any Parquet parse) or by hashing the serialized DataFrame after parsing.
+
+**Resolution**: The hash MUST be computed over the **raw bytes** of the file on disk (e.g., `hashlib.sha256` streaming the file in binary mode), before any Parquet parsing occurs. This is the correct production pattern because: (a) it catches any byte-level change including metadata, encoding changes, and schema evolution; (b) it avoids the overhead of parsing every candidate file just to compute a hash; (c) it is deterministic and independent of Polars/DuckDB versions. The manifest skip check (FR-003) means the pipeline reads file *metadata* (size, mtime, path) and the raw bytes only for hashing — it does NOT parse the Parquet into a DataFrame for files that will be skipped.
+
+---
+
+### Q2: What manifest `status` is written when a file is only partially ingested (some records valid, some quarantined)?
+
+**Ambiguity**: FR-002 defines `status` as `pending | success | failed` with no `partial` state. However, the existing pipeline (Feature 002) already supports files where some records pass validation and are loaded while others are quarantined. It is unclear whether a file with 900 valid records loaded and 100 quarantined should be recorded as `success` or `failed`.
+
+**Resolution**: A file MUST be recorded with status `success` if at least one record was successfully loaded into the warehouse, regardless of how many records were quarantined. Status `failed` is reserved exclusively for: (a) files that could not be read at all (I/O error, corrupted Parquet), (b) files that failed file-level schema validation entirely (all records rejected), or (c) files where an unhandled exception occurred during processing. This aligns with the existing Feature 002 behavior where partial ingestion is a normal, expected outcome (quarantine handles the invalid subset). The `error_message` column may optionally record a summary like "100 records quarantined" for `success` entries with quarantined records.
+
+---
+
+### Q3: Does `--full-refresh` preserve manifest history or overwrite it in place?
+
+**Ambiguity**: FR-008 says "reset manifest entries for all files (update status to `pending`)" and the Assumptions section says "reset manifest entries." US3 scenario 1 says "manifest entries are reset/updated for all files." It is unclear whether the reset is an in-place UPDATE of the existing row (destroying history), a DELETE + re-insert, or the insertion of new rows (preserving prior run history).
+
+**Resolution**: `--full-refresh` MUST perform an **in-place UPDATE** of existing manifest rows (setting `status = 'pending'`, `run_id` to the current run ID, clearing `error_message`) rather than deleting or inserting new rows. This is consistent with the `file_manifest` being a **current-state table** (one row per file path, latest state wins — as stated in the Key Entities section: "latest entry per path wins"). Historical run-level lineage is preserved in `ingestion_runs` via the `run_id` foreign key. Files with no existing manifest entry are handled identically to their first-time ingestion (INSERT with `pending`). After all files complete, each entry is updated to `success` or `failed` per FR-012.
+
+---
+
+### Q4: Is `file_manifest` an append-only log or a current-state table (one row per file)?
+
+**Ambiguity**: The Key Entities section states "latest entry per path wins" (implying upsert / current-state), but FR-012 says the entry is "written with status `pending` before ingestion begins, updated to `success` or `failed` upon completion" (implying in-place update of a single row). SC-003 requires every entry to join to `ingestion_runs` with "zero orphaned manifest records," which is easier to enforce with a current-state model. However, US4 scenario 3 says the user can "reconstruct the full history: which run processed each file" — which seems to require a log.
+
+**Resolution**: `file_manifest` MUST be a **current-state table** with exactly one row per `file_path` (the latest processing state). The primary key is `file_path`. Run-level history is NOT stored in the manifest itself — it is available by querying `ingestion_runs` joined on `run_id`. When a file is reprocessed (due to hash change, `failed` retry, or `--full-refresh`), its manifest row is updated in place with the new `run_id`, `file_hash`, `processed_at`, and `status`. This design: (a) keeps the manifest compact and O(files) not O(runs × files); (b) satisfies SC-003 (one row per file = one `run_id` per row, trivially non-orphaned); (c) is consistent with FR-008's "reset" semantics. Full audit history across runs is reconstructable by inspecting `ingestion_runs` directly.
+
+---
+
+### Q5: How does the manifest `run_id` get assigned when the pending entry is written before ingestion begins?
+
+**Ambiguity**: FR-012 says "the entry is written with status `pending` before ingestion begins" and must be linked to the current `run_id`. In the existing pipeline (`pipeline.py`), `run_id` is generated at the start of `run_pipeline()` before any file processing. However, for a current-state table with one row per file (Clarification Q4), it is unclear whether the pending write is an INSERT (first time) or an UPSERT/UPDATE (subsequent runs), and whether the `run_id` is set to the current run's ID at the pending stage or only at completion.
+
+**Resolution**: The manifest write sequence for each file MUST be: (1) **UPSERT** the manifest entry with `status = 'pending'`, `run_id = <current_run_id>`, `file_hash = <computed_hash>`, `file_size_bytes`, `file_mtime`, and `processed_at = NOW()` **before** calling the ingestion logic for that file; (2) **UPDATE** the same row to `status = 'success'` or `status = 'failed'` (and populate `error_message` if failed) **after** ingestion completes. Using the current `run_id` at the pending stage ensures that if the pipeline crashes mid-file, the manifest entry correctly points to the run that was attempting the file, and the `ingestion_runs` record for that run will show `failed` status — satisfying SC-006. The UPSERT pattern (INSERT OR REPLACE / INSERT ... ON CONFLICT DO UPDATE) is used because the file may or may not have a prior manifest entry.
