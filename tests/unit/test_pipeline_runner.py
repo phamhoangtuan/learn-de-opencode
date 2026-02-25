@@ -318,3 +318,75 @@ class TestRunPipelineHaltOnFailure:
                 from_step_name="ingest",
                 project_root=str(tmp_path),
             )
+
+
+# ---------------------------------------------------------------------------
+# _resolve_active_steps -- skip_step_names
+# ---------------------------------------------------------------------------
+
+
+class TestResolveActiveStepsSkip:
+    """Tests for --skip-steps filtering logic."""
+
+    def test_skip_dashboard_excludes_it(self, linear_steps: list[PipelineStep]) -> None:
+        result = _resolve_active_steps(linear_steps, None, None, {"dashboard"})
+        names = [s.name for s in result]
+        assert "dashboard" not in names
+        assert names == ["generate", "ingest", "transforms", "checks"]
+
+    def test_skipped_step_in_results_with_skipped_status(
+        self, linear_steps: list[PipelineStep], tmp_path: str
+    ) -> None:
+        success_result = MagicMock()
+        success_result.returncode = 0
+
+        with patch(_PATCH_SUBPROCESS, return_value=success_result):
+            run = run_pipeline(
+                linear_steps,
+                skip_step_names={"dashboard"},
+                project_root=str(tmp_path),
+            )
+
+        statuses = {r.step: r.status for r in run.step_results}
+        assert statuses["dashboard"] == "skipped"
+        assert statuses["generate"] == "success"
+        assert statuses["checks"] == "success"
+
+    def test_skip_all_steps_pipeline_succeeds(
+        self, linear_steps: list[PipelineStep], tmp_path: str
+    ) -> None:
+        all_names = {s.name for s in linear_steps}
+        with patch(_PATCH_SUBPROCESS) as mock_sub:
+            run = run_pipeline(
+                linear_steps,
+                skip_step_names=all_names,
+                project_root=str(tmp_path),
+            )
+        mock_sub.assert_not_called()
+        assert run.status == "success"
+        skipped = [r for r in run.step_results if r.status == "skipped"]
+        assert len(skipped) == 5
+
+    def test_skip_combined_with_step_skip_takes_effect(
+        self, linear_steps: list[PipelineStep], tmp_path: str
+    ) -> None:
+        # --step generate --skip-steps generate → nothing runs
+        success_result = MagicMock()
+        success_result.returncode = 0
+
+        with patch(_PATCH_SUBPROCESS) as mock_sub:
+            run = run_pipeline(
+                linear_steps,
+                step_name="generate",
+                skip_step_names={"generate"},
+                project_root=str(tmp_path),
+            )
+        mock_sub.assert_not_called()
+        assert run.status == "success"
+
+    def test_skip_multiple_steps(self, linear_steps: list[PipelineStep]) -> None:
+        result = _resolve_active_steps(
+            linear_steps, None, None, {"checks", "dashboard"}
+        )
+        names = [s.name for s in result]
+        assert names == ["generate", "ingest", "transforms"]

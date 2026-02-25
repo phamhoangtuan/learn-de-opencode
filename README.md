@@ -1,5 +1,7 @@
 # learn_de - Data Engineering Learning Project
 
+![CI](https://github.com/phamhoangtuan/learn-de-opencode/actions/workflows/ci.yml/badge.svg)
+
 A production-style data engineering project built with Python, Polars, and DuckDB. Generates realistic synthetic financial transaction data, ingests it into a local analytical warehouse with schema validation, deduplication, and lineage tracking, transforms it into curated staging views and analytical mart tables using a lightweight dbt-inspired SQL runner, and validates data quality through automated SQL-based checks.
 
 ## Prerequisites
@@ -399,3 +401,4 @@ data/
 - **ruff** -- linting and formatting
 - **uv** -- dependency management
 - **Evidence.dev** -- SQL-based interactive dashboard framework
+- **GitHub Actions** -- CI/CD: lint, test, and end-to-end pipeline on every push/PR

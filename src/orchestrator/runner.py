@@ -1,8 +1,8 @@
 """Core execution logic for the pipeline orchestrator.
 
-Resolves the DAG execution order, applies step filters (--step / --from-step),
-invokes each step as a subprocess, emits structured JSON logs to stdout, and
-collects per-step results into a PipelineRun.
+Resolves the DAG execution order, applies step filters (--step / --from-step /
+--skip-steps), invokes each step as a subprocess, emits structured JSON logs to
+stdout, and collects per-step results into a PipelineRun.
 """
 
 from __future__ import annotations
@@ -52,13 +52,20 @@ def _resolve_active_steps(
     ordered_steps: list[PipelineStep],
     step_name: str | None,
     from_step_name: str | None,
+    skip_step_names: set[str] | None = None,
 ) -> list[PipelineStep]:
     """Return the subset of steps to execute based on CLI filters.
+
+    Filters are applied in order:
+    1. ``step_name`` — keep only this single step.
+    2. ``from_step_name`` — keep from this step onwards (inclusive).
+    3. ``skip_step_names`` — remove named steps from the active set.
 
     Args:
         ordered_steps: Full list of steps in resolved execution order.
         step_name: If set, run only this single step.
         from_step_name: If set, run from this step onwards (inclusive).
+        skip_step_names: If set, exclude these step names from the active set.
 
     Returns:
         The filtered list of PipelineStep objects to run.
@@ -73,17 +80,21 @@ def _resolve_active_steps(
             raise ValueError(
                 f"Unknown step '{step_name}'. Available: {', '.join(names)}"
             )
-        return [s for s in ordered_steps if s.name == step_name]
-
-    if from_step_name is not None:
+        active = [s for s in ordered_steps if s.name == step_name]
+    elif from_step_name is not None:
         if from_step_name not in names:
             raise ValueError(
                 f"Unknown step '{from_step_name}'. Available: {', '.join(names)}"
             )
         idx = names.index(from_step_name)
-        return ordered_steps[idx:]
+        active = ordered_steps[idx:]
+    else:
+        active = list(ordered_steps)
 
-    return ordered_steps
+    if skip_step_names:
+        active = [s for s in active if s.name not in skip_step_names]
+
+    return active
 
 
 def _run_step(step: PipelineStep, project_root: str) -> StepResult:
@@ -145,6 +156,7 @@ def run_pipeline(
     *,
     step_name: str | None = None,
     from_step_name: str | None = None,
+    skip_step_names: set[str] | None = None,
     dry_run: bool = False,
     project_root: str,
 ) -> PipelineRun:
@@ -158,6 +170,7 @@ def run_pipeline(
         steps: Declarative list of PipelineStep nodes (unordered is fine).
         step_name: If set, run only this single named step.
         from_step_name: If set, run from this step through the end.
+        skip_step_names: If set, exclude these named steps from execution.
         dry_run: If True, print the plan and return without executing anything.
         project_root: Absolute path to the project root (used as cwd base).
 
@@ -183,7 +196,9 @@ def run_pipeline(
     )
 
     # Apply filters
-    active_steps = _resolve_active_steps(ordered_steps, step_name, from_step_name)
+    active_steps = _resolve_active_steps(
+        ordered_steps, step_name, from_step_name, skip_step_names
+    )
     active_names = {s.name for s in active_steps}
 
     run = PipelineRun(dry_run=dry_run)
