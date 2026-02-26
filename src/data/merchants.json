@@ -1,0 +1,185 @@
+{
+  "categories": [
+    {
+      "name": "Groceries",
+      "weight": 0.18,
+      "merchants": [
+        {"merchant_name": "Whole Foods", "mcc": "5411"},
+        {"merchant_name": "Trader Joe's", "mcc": "5411"},
+        {"merchant_name": "Kroger", "mcc": "5411"},
+        {"merchant_name": "Safeway", "mcc": "5411"},
+        {"merchant_name": "Aldi", "mcc": "5411"},
+        {"merchant_name": "Publix", "mcc": "5411"}
+      ]
+    },
+    {
+      "name": "Dining",
+      "weight": 0.12,
+      "merchants": [
+        {"merchant_name": "Chipotle", "mcc": "5812"},
+        {"merchant_name": "Starbucks", "mcc": "5814"},
+        {"merchant_name": "McDonald's", "mcc": "5814"},
+        {"merchant_name": "Olive Garden", "mcc": "5812"},
+        {"merchant_name": "Panera Bread", "mcc": "5812"},
+        {"merchant_name": "Subway", "mcc": "5814"}
+      ]
+    },
+    {
+      "name": "Transport",
+      "weight": 0.10,
+      "merchants": [
+        {"merchant_name": "Uber", "mcc": "4121"},
+        {"merchant_name": "Lyft", "mcc": "4121"},
+        {"merchant_name": "Shell", "mcc": "5541"},
+        {"merchant_name": "BP Gas", "mcc": "5541"},
+        {"merchant_name": "ExxonMobil", "mcc": "5541"},
+        {"merchant_name": "Chevron", "mcc": "5541"}
+      ]
+    },
+    {
+      "name": "Utilities",
+      "weight": 0.08,
+      "merchants": [
+        {"merchant_name": "Electric Co", "mcc": "4900"},
+        {"merchant_name": "Water Utility", "mcc": "4900"},
+        {"merchant_name": "Comcast Xfinity", "mcc": "4899"},
+        {"merchant_name": "AT&T", "mcc": "4812"},
+        {"merchant_name": "Verizon", "mcc": "4812"}
+      ]
+    },
+    {
+      "name": "Entertainment",
+      "weight": 0.07,
+      "merchants": [
+        {"merchant_name": "Netflix", "mcc": "4899"},
+        {"merchant_name": "Spotify", "mcc": "5815"},
+        {"merchant_name": "AMC Theaters", "mcc": "7832"},
+        {"merchant_name": "Disney+", "mcc": "4899"},
+        {"merchant_name": "Steam", "mcc": "5816"}
+      ]
+    },
+    {
+      "name": "Healthcare",
+      "weight": 0.06,
+      "merchants": [
+        {"merchant_name": "CVS Pharmacy", "mcc": "5912"},
+        {"merchant_name": "Walgreens", "mcc": "5912"},
+        {"merchant_name": "Kaiser Permanente", "mcc": "8011"},
+        {"merchant_name": "Quest Diagnostics", "mcc": "8071"},
+        {"merchant_name": "Rite Aid", "mcc": "5912"}
+      ]
+    },
+    {
+      "name": "Shopping",
+      "weight": 0.06,
+      "merchants": [
+        {"merchant_name": "Amazon", "mcc": "5999"},
+        {"merchant_name": "Target", "mcc": "5311"},
+        {"merchant_name": "Walmart", "mcc": "5311"},
+        {"merchant_name": "Costco", "mcc": "5300"},
+        {"merchant_name": "eBay", "mcc": "5999"}
+      ]
+    },
+    {
+      "name": "Travel",
+      "weight": 0.05,
+      "merchants": [
+        {"merchant_name": "Delta Airlines", "mcc": "3058"},
+        {"merchant_name": "Marriott", "mcc": "7011"},
+        {"merchant_name": "Airbnb", "mcc": "7011"},
+        {"merchant_name": "United Airlines", "mcc": "3000"},
+        {"merchant_name": "Hilton Hotels", "mcc": "7011"}
+      ]
+    },
+    {
+      "name": "Insurance",
+      "weight": 0.04,
+      "merchants": [
+        {"merchant_name": "State Farm", "mcc": "6300"},
+        {"merchant_name": "Allstate", "mcc": "6300"},
+        {"merchant_name": "GEICO", "mcc": "6300"}
+      ]
+    },
+    {
+      "name": "Education",
+      "weight": 0.04,
+      "merchants": [
+        {"merchant_name": "Coursera", "mcc": "8220"},
+        {"merchant_name": "University Bookstore", "mcc": "5942"},
+        {"merchant_name": "Udemy", "mcc": "8220"}
+      ]
+    },
+    {
+      "name": "Subscriptions",
+      "weight": 0.03,
+      "merchants": [
+        {"merchant_name": "Adobe", "mcc": "5734"},
+        {"merchant_name": "Microsoft 365", "mcc": "5734"},
+        {"merchant_name": "Dropbox", "mcc": "5734"}
+      ]
+    },
+    {
+      "name": "Personal Care",
+      "weight": 0.03,
+      "merchants": [
+        {"merchant_name": "Great Clips", "mcc": "7230"},
+        {"merchant_name": "Sephora", "mcc": "5977"},
+        {"merchant_name": "Supercuts", "mcc": "7230"}
+      ]
+    },
+    {
+      "name": "Home & Garden",
+      "weight": 0.03,
+      "merchants": [
+        {"merchant_name": "Home Depot", "mcc": "5200"},
+        {"merchant_name": "Lowe's", "mcc": "5200"},
+        {"merchant_name": "IKEA", "mcc": "5712"}
+      ]
+    },
+    {
+      "name": "Fitness",
+      "weight": 0.03,
+      "merchants": [
+        {"merchant_name": "Planet Fitness", "mcc": "7941"},
+        {"merchant_name": "Peloton", "mcc": "5941"},
+        {"merchant_name": "LA Fitness", "mcc": "7941"}
+      ]
+    },
+    {
+      "name": "Electronics",
+      "weight": 0.02,
+      "merchants": [
+        {"merchant_name": "Best Buy", "mcc": "5732"},
+        {"merchant_name": "Apple Store", "mcc": "5732"},
+        {"merchant_name": "Micro Center", "mcc": "5732"}
+      ]
+    },
+    {
+      "name": "Clothing",
+      "weight": 0.02,
+      "merchants": [
+        {"merchant_name": "Nike", "mcc": "5651"},
+        {"merchant_name": "H&M", "mcc": "5651"},
+        {"merchant_name": "Zara", "mcc": "5651"}
+      ]
+    },
+    {
+      "name": "Gifts & Donations",
+      "weight": 0.02,
+      "merchants": [
+        {"merchant_name": "GoFundMe", "mcc": "8398"},
+        {"merchant_name": "Red Cross", "mcc": "8398"},
+        {"merchant_name": "Salvation Army", "mcc": "8398"}
+      ]
+    },
+    {
+      "name": "Miscellaneous",
+      "weight": 0.02,
+      "merchants": [
+        {"merchant_name": "Post Office", "mcc": "9402"},
+        {"merchant_name": "Dry Cleaners", "mcc": "7210"},
+        {"merchant_name": "FedEx", "mcc": "4215"}
+      ]
+    }
+  ]
+}
