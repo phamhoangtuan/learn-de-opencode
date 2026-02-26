@@ -77,6 +77,54 @@ Create internal representations (do not include raw artifacts in output):
 
 Focus on high-signal findings. Limit to 50 findings total; aggregate remainder in overflow summary.
 
+Dispatch passes **A, B, C, D, E, F** as **parallel** Sonnet subagents in a **single message**. Each subagent receives the artifact content (spec.md, plan.md, tasks.md, constitution.md) and returns its findings as a structured list. The orchestrator collects all results in Step 5 before synthesizing the final report in Step 6.
+
+```
+Task tool (parallel, single message):
+  [A] subagent_type: "general-purpose", model: "claude-sonnet-4-6"
+      prompt: "Duplication Detection pass on these artifacts: {SPEC}, {PLAN}, {TASKS}.
+               Identify near-duplicate requirements. Mark lower-quality phrasing for consolidation.
+               Return findings as: ID | Location | Summary | Recommendation"
+
+  [B] subagent_type: "general-purpose", model: "claude-sonnet-4-6"
+      prompt: "Ambiguity Detection pass on these artifacts: {SPEC}, {PLAN}, {TASKS}.
+               Flag vague adjectives (fast, scalable, secure, intuitive, robust) lacking measurable criteria.
+               Flag unresolved placeholders (TODO, TKTK, ???, <placeholder>, etc.).
+               Return findings as: ID | Location | Summary | Recommendation"
+
+  [C] subagent_type: "general-purpose", model: "claude-sonnet-4-6"
+      prompt: "Underspecification pass on these artifacts: {SPEC}, {PLAN}, {TASKS}.
+               Find requirements with verbs but missing object or measurable outcome.
+               Find user stories missing acceptance criteria alignment.
+               Find tasks referencing files or components not defined in spec/plan.
+               Return findings as: ID | Location | Summary | Recommendation"
+
+  [D] subagent_type: "general-purpose", model: "claude-sonnet-4-6"
+      prompt: "Constitution Alignment pass on these artifacts: {SPEC}, {PLAN}, {TASKS}, {CONSTITUTION}.
+               Identify any requirement or plan element conflicting with a MUST principle.
+               Identify missing mandated sections or quality gates from constitution.
+               Return findings as: ID | Location | Summary | Recommendation"
+
+  [E] subagent_type: "general-purpose", model: "claude-sonnet-4-6"
+      prompt: "Coverage Gap pass on these artifacts: {SPEC}, {PLAN}, {TASKS}.
+               Identify requirements with zero associated tasks.
+               Identify tasks with no mapped requirement/story.
+               Identify non-functional requirements not reflected in tasks (performance, security, etc.).
+               Return findings as: ID | Location | Summary | Recommendation"
+
+  [F] subagent_type: "general-purpose", model: "claude-sonnet-4-6"
+      prompt: "Inconsistency pass on these artifacts: {SPEC}, {PLAN}, {TASKS}.
+               Detect terminology drift (same concept named differently across files).
+               Detect data entities referenced in plan but absent in spec (or vice versa).
+               Detect task ordering contradictions (integration before foundational setup without dependency note).
+               Detect conflicting requirements (e.g., one requires Next.js while other specifies Vue).
+               Return findings as: ID | Location | Summary | Recommendation"
+```
+
+Wait for ALL 6 subagents to complete before proceeding to Step 5.
+
+Pass descriptions (for reference):
+
 #### A. Duplication Detection
 
 - Identify near-duplicate requirements

@@ -105,9 +105,21 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 6. Execute implementation following the task plan:
    - **Phase-by-phase execution**: Complete each phase before moving to the next
-   - **Respect dependencies**: Run sequential tasks in order, parallel tasks [P] can run together
+   - **Respect dependencies**: Run sequential tasks in order; tasks marked `[P]` MUST be dispatched as parallel Task tool subagents
+   - **Parallel dispatch rule**: All `[P]` tasks within the same phase MUST be sent in a **single message** as parallel Task tool invocations with `model: "claude-sonnet-4-6"`. Do NOT execute `[P]` tasks sequentially inline.
+
+     ```
+     Task tool (parallel, single message — for all [P] tasks in a phase):
+       [1] subagent_type: "general-purpose", model: "claude-sonnet-4-6"
+           prompt: "{full task description from tasks.md, including file paths and acceptance criteria}"
+       [2] subagent_type: "general-purpose", model: "claude-sonnet-4-6"
+           prompt: "{full task description from tasks.md, including file paths and acceptance criteria}"
+       ...
+     ```
+
+   - **Sequential tasks**: Execute inline by the orchestrator in dependency order
    - **Follow TDD approach**: Execute test tasks before their corresponding implementation tasks
-   - **File-based coordination**: Tasks affecting the same files must run sequentially
+   - **File-based coordination**: Tasks affecting the same files must run sequentially (never mark as [P] if file-conflicting)
    - **Validation checkpoints**: Verify each phase completion before proceeding
 
 7. Implementation execution rules:

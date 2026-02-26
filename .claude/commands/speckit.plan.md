@@ -38,12 +38,23 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 2. **Generate and dispatch research agents**:
 
-   ```text
-   For each unknown in Technical Context:
-     Task: "Research {unknown} for {feature context}"
-   For each technology choice:
-     Task: "Find best practices for {tech} in {domain}"
+   Dispatch ALL research unknowns as **parallel** subagents in a **single message** using the Task tool. For each unknown or technology choice, invoke:
+
    ```
+   Task tool:
+     subagent_type: "general-purpose"
+     model: "claude-sonnet-4-6"
+     prompt: "Research {unknown} for {feature context}. Return findings as:
+              - Decision: [what is recommended]
+              - Rationale: [why]
+              - Alternatives: [what else was evaluated]"
+   ```
+
+   Rules:
+   - ALL unknowns must be dispatched in a single message (parallel, not sequential)
+   - ALWAYS set `model: "claude-sonnet-4-6"` on every Task invocation
+   - Do NOT run research sequentially inline — always use the Task tool
+   - Wait for ALL subagents to complete before proceeding to Step 3
 
 3. **Consolidate findings** in `research.md` using format:
    - Decision: [what was chosen]
@@ -72,6 +83,18 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Update the appropriate agent-specific context file
    - Add only new technology from current plan
    - Preserve manual additions between markers
+
+**Parallel dispatch**: `data-model.md` extraction and `contracts/` generation are independent — dispatch them as parallel Sonnet subagents in a single message once `research.md` is complete:
+
+   ```
+   Task tool (parallel, single message):
+     [1] subagent_type: "general-purpose", model: "claude-sonnet-4-6"
+         prompt: "Extract entities from {FEATURE_SPEC} and write data-model.md to {FEATURE_DIR}/data-model.md"
+     [2] subagent_type: "general-purpose", model: "claude-sonnet-4-6"
+         prompt: "Generate API contracts from {FEATURE_SPEC} functional requirements. Write OpenAPI/GraphQL schema to {FEATURE_DIR}/contracts/"
+   ```
+
+   Wait for both to complete before running the agent context update (Step 3 above).
 
 **Output**: data-model.md, /contracts/*, quickstart.md, agent-specific file
 
