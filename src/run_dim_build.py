@@ -2,6 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #     "duckdb",
+#     "polars",
 # ]
 # ///
 """Run the dim_accounts SCD Type 2 dimension build step.
@@ -30,7 +31,11 @@ _project_root = str(Path(__file__).resolve().parent.parent)
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
-from src.dimensions.dim_accounts import DimBuildError, build_dim_accounts, create_dim_tables  # noqa: E402
+from src.dimensions.dim_accounts import (  # noqa: E402
+    DimBuildError,
+    build_dim_accounts,
+    create_dim_tables,
+)
 from src.ingestion.loader import connect  # noqa: E402
 
 DEFAULT_DB_PATH = "data/warehouse/transactions.duckdb"
@@ -47,10 +52,20 @@ def _configure_logging(verbose: bool = False) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the dim_accounts SCD2 dimension build.")
+    parser = argparse.ArgumentParser(
+        description="Run the dim_accounts SCD2 dimension build."
+    )
     parser.add_argument("--db-path", default=DEFAULT_DB_PATH)
-    parser.add_argument("--run-id", default=None, help="Pipeline run ID (default: auto-generated UUID)")
-    parser.add_argument("--run-date", default=None, help="Run date YYYY-MM-DD (default: today)")
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="Pipeline run ID (default: auto-generated UUID)",
+    )
+    parser.add_argument(
+        "--run-date",
+        default=None,
+        help="Run date YYYY-MM-DD (default: today)",
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 

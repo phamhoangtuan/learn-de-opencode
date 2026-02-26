@@ -69,8 +69,12 @@ def insert_txn(
     """Insert a single transaction row using a UUID primary key."""
     txn_id = str(uuid.uuid4())
     conn.execute(
-        "INSERT INTO transactions VALUES (?,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,'run-setup')",
-        [txn_id, amount, currency, "Merchant", category, account_id, "debit", "completed", txn_date, "file.parquet"],
+        "INSERT INTO transactions VALUES"
+        " (?,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,'run-setup')",
+        [
+            txn_id, amount, currency, "Merchant", category,
+            account_id, "debit", "completed", txn_date, "file.parquet",
+        ],
     )
 
 
@@ -109,9 +113,11 @@ class TestDimQualityChecks:
 
         # Manually inject a second is_current=TRUE row for the same account_id
         conn.execute("""INSERT INTO dim_accounts
-            (account_id, primary_currency, primary_category, transaction_count,
-             total_spend, first_seen, last_seen, row_hash, valid_from, valid_to, is_current, run_id)
-            VALUES ('ACC-DUP','EUR','Travel',5,200.0,'2026-01-01','2026-01-15','bad-hash',
+            (account_id, primary_currency, primary_category,
+             transaction_count, total_spend, first_seen, last_seen,
+             row_hash, valid_from, valid_to, is_current, run_id)
+            VALUES ('ACC-DUP','EUR','Travel',5,200.0,
+            '2026-01-01','2026-01-15','bad-hash',
             '2026-01-01T00:00:00+00:00',NULL,TRUE,'run-bad')""")
 
         check_sql = (

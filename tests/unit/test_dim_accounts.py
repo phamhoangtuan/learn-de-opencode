@@ -20,7 +20,6 @@ import pytest
 
 from src.dimensions.dim_accounts import (
     DimBuildError,
-    DimBuildResult,
     build_dim_accounts,
     create_dim_tables,
 )
@@ -78,7 +77,8 @@ def insert_txn(
 ) -> None:
     """Insert a single transaction row into the transactions table."""
     conn.execute(
-        "INSERT INTO transactions VALUES (?,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?)",
+        "INSERT INTO transactions VALUES"
+        " (?,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?)",
         [
             txn_id,
             amount,
@@ -215,7 +215,7 @@ class TestBuildDimAccountsFirstRun:
         """Fetch all dim_accounts rows as a list of dicts keyed by column name."""
         cursor = self.conn.execute("SELECT * FROM dim_accounts")
         cols = [d[0] for d in cursor.description]
-        return [dict(zip(cols, row)) for row in cursor.fetchall()]
+        return [dict(zip(cols, row, strict=False)) for row in cursor.fetchall()]
 
     def _row_for(self, account_id: str) -> dict:
         rows = self._rows()
@@ -303,7 +303,7 @@ class TestChangeDetection:
             [account_id],
         )
         cols = [d[0] for d in cursor.description]
-        return [dict(zip(cols, row)) for row in cursor.fetchall()]
+        return [dict(zip(cols, row, strict=False)) for row in cursor.fetchall()]
 
     def test_old_row_expired(self) -> None:
         """ACC-001 old row must have is_current=FALSE and valid_to IS NOT NULL."""
@@ -430,7 +430,7 @@ class TestMartAccountHistory:
             [account_id],
         )
         cols = [d[0] for d in cursor.description]
-        return [dict(zip(cols, row)) for row in cursor.fetchall()]
+        return [dict(zip(cols, row, strict=False)) for row in cursor.fetchall()]
 
     def test_version_number_increments(self) -> None:
         """ACC-001 must have version_number 1 for the old row and 2 for the new row."""
@@ -449,8 +449,10 @@ class TestMartAccountHistory:
         """Expired row version_duration_days must equal (valid_to::date - valid_from::date)."""
         rows = self._mart_rows_for("ACC-001")
         expired_row = next(r for r in rows if not r["is_current"])
-        valid_from_date = expired_row["valid_from"].date() if hasattr(expired_row["valid_from"], "date") else expired_row["valid_from"]
-        valid_to_date = expired_row["valid_to"].date() if hasattr(expired_row["valid_to"], "date") else expired_row["valid_to"]
+        vf = expired_row["valid_from"]
+        vt = expired_row["valid_to"]
+        valid_from_date = vf.date() if hasattr(vf, "date") else vf
+        valid_to_date = vt.date() if hasattr(vt, "date") else vt
         expected_duration = (valid_to_date - valid_from_date).days
         assert expired_row["version_duration_days"] == expected_duration
 

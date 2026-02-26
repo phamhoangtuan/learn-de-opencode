@@ -3,7 +3,7 @@
 ## Subagent Policy
 
 This project uses a two-tier model strategy:
-- **Orchestration (this session)**: claude-opus-4-6 — complex planning, decision-making, synthesis
+- **Orchestration (this session)**: claude-sonnet-4-6 — complex planning, decision-making, synthesis
 - **Subagents (Task tool)**: claude-sonnet-4-6 — research, execution, parallel work
 
 **Rules:**

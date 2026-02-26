@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from time import monotonic
 
 import duckdb
@@ -247,10 +247,10 @@ def build_dim_accounts(
     """
     start = monotonic()
     # valid_from for new rows = midnight UTC on run_date
-    run_ts = datetime(run_date.year, run_date.month, run_date.day, tzinfo=timezone.utc).isoformat()
+    run_ts = datetime(run_date.year, run_date.month, run_date.day, tzinfo=UTC).isoformat()
     # valid_to for expired rows = midnight UTC on run_date - 1 day (non-overlapping)
     expire_ts = (
-        datetime(run_date.year, run_date.month, run_date.day, tzinfo=timezone.utc)
+        datetime(run_date.year, run_date.month, run_date.day, tzinfo=UTC)
         - timedelta(days=1)
     ).isoformat()
 
@@ -303,7 +303,7 @@ def build_dim_accounts(
     )
 
     # T032: persist dim build metadata
-    completed_at = datetime.now(tz=timezone.utc).isoformat()
+    completed_at = datetime.now(tz=UTC).isoformat()
     conn.execute(
         """
         INSERT INTO dim_build_runs (run_id, accounts_processed, new_versions, unchanged,

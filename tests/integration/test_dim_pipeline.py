@@ -70,8 +70,12 @@ def insert_txn(
     """Insert a single transaction row using a UUID primary key."""
     txn_id = str(uuid.uuid4())
     conn.execute(
-        "INSERT INTO transactions VALUES (?,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,'run-setup')",
-        [txn_id, amount, currency, "Merchant", category, account_id, "debit", "completed", txn_date, "file.parquet"],
+        "INSERT INTO transactions VALUES"
+        " (?,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,'run-setup')",
+        [
+            txn_id, amount, currency, "Merchant", category,
+            account_id, "debit", "completed", txn_date, "file.parquet",
+        ],
     )
 
 
@@ -240,7 +244,9 @@ class TestAccountHistoryMart:
 
         conn.execute("""CREATE OR REPLACE VIEW mart__account_history AS
             SELECT *,
-                   ROW_NUMBER() OVER (PARTITION BY account_id ORDER BY valid_from) AS version_number,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY account_id ORDER BY valid_from
+                   ) AS version_number,
                    CASE WHEN is_current
                         THEN CAST(current_date - CAST(valid_from AS DATE) AS INTEGER)
                         ELSE CAST(CAST(valid_to AS DATE) - CAST(valid_from AS DATE) AS INTEGER)
