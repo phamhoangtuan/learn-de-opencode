@@ -39,19 +39,15 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.11+: Follow standard conventions
 
 ## Recent Changes
+- 009-scd2-accounts: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 - 007-github-actions-cicd: Added GitHub Actions CI/CD workflow. Workflow at `.github/workflows/ci.yml` — triggers on push/PR to main, runs lint + test + E2E pipeline.
 
 - 006-pipeline-orchestration: Added Python 3.11+ + DuckDB (pipeline orchestration, DAG resolution, subprocess execution, metadata tracking). Run pipeline: `uv run src/run_pipeline.py`
 
-- 005-evidence-dashboard: Added Evidence.dev + DuckDB (interactive dashboard, read-only connection to warehouse). Start dashboard: `cd dashboard && npm run dev`
 
-- 004-data-quality-checks: Added Python 3.11+ + DuckDB (SQL-based data quality checks, severity levels, metadata tracking). Run checks: `uv run src/run_checks.py`
 
-- 003-sql-transformations: Added Python 3.11+ + DuckDB (SQL transforms, DAG resolution, metadata tracking). Run transforms: `uv run src/run_transforms.py`
 
-- 002-duckdb-ingestion: Added Python 3.11+ + Polars (Parquet read, validation, dedup), DuckDB (warehouse storage, SQL queries), NumPy (inherited from Feature 001)
 
-- 001-synthetic-financial-data: Added Python 3.11+ + Polars (data generation/output), Faker (names/merchants), NumPy (distributions)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

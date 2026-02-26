@@ -140,6 +140,26 @@ def healthy_warehouse(tmp_path: Path) -> Path:
         ORDER BY month, account_id, currency
     """)
 
+    # Create dim_accounts for the dim_accounts integrity checks
+    conn.execute("CREATE SEQUENCE IF NOT EXISTS dim_accounts_sk_seq START 1;")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS dim_accounts (
+            account_sk          BIGINT      PRIMARY KEY DEFAULT nextval('dim_accounts_sk_seq'),
+            account_id          VARCHAR     NOT NULL,
+            primary_currency    VARCHAR     NOT NULL,
+            primary_category    VARCHAR     NOT NULL,
+            transaction_count   BIGINT      NOT NULL,
+            total_spend         DOUBLE      NOT NULL,
+            first_seen          DATE        NOT NULL,
+            last_seen           DATE        NOT NULL,
+            row_hash            VARCHAR     NOT NULL,
+            valid_from          TIMESTAMPTZ NOT NULL,
+            valid_to            TIMESTAMPTZ,
+            is_current          BOOLEAN     NOT NULL DEFAULT TRUE,
+            run_id              VARCHAR     NOT NULL
+        )
+    """)
+
     conn.close()
     return db_path
 
@@ -153,13 +173,13 @@ class TestHealthyWarehouse:
     """End-to-end tests with healthy data — all checks should pass."""
 
     def test_all_checks_pass(self, healthy_warehouse: Path) -> None:
-        """All 6 pre-built checks pass on a healthy warehouse."""
+        """All 9 pre-built checks pass on a healthy warehouse."""
         result = run_checks(
             db_path=healthy_warehouse, checks_dir=CHECKS_DIR
         )
         assert result.status == RunStatus.PASSED
-        assert result.total_checks == 6
-        assert result.checks_passed == 6
+        assert result.total_checks == 9
+        assert result.checks_passed == 9
         assert result.checks_failed == 0
         assert result.checks_errored == 0
 
@@ -203,7 +223,7 @@ class TestHealthyWarehouse:
             ).fetchone()
             assert run_row is not None
             assert run_row[0] == "passed"
-            assert run_row[1] == 6
+            assert run_row[1] == 9
         finally:
             conn.close()
 
