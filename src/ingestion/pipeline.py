@@ -31,6 +31,7 @@ from src.ingestion.loader import (
     insert_quarantine_batch,
     insert_transactions,
 )
+from src.ingestion.manifest import ManifestStore, compute_file_hash
 from src.ingestion.models import FileResult, RunResult, RunStatus
 from src.ingestion.validator import validate_file_schema, validate_records
 
@@ -249,10 +250,80 @@ def _serialize_value(value: object) -> str:
     return str(value)
 
 
+def _filter_files_by_manifest(
+    files: list[Path],
+    manifest: ManifestStore,
+    source_dir: Path,
+    full_refresh: bool,
+) -> tuple[list[tuple[Path, str, float]], int]:
+    """Filter files based on manifest state.
+
+    Applies mtime watermark pre-filter, computes hashes for candidates,
+    and checks manifest skip status.
+
+    Args:
+        files: List of discovered Parquet file paths.
+        manifest: ManifestStore instance.
+        source_dir: Source directory path.
+        full_refresh: If True, skip manifest filtering.
+
+    Returns:
+        Tuple of (list of (file_path, file_hash, file_mtime) tuples to process,
+                  count of files skipped).
+    """
+    pending: list[tuple[Path, str, float]] = []
+    skipped_count = 0
+
+    # Get watermark unless full refresh
+    watermark: float | None = None
+    if not full_refresh:
+        watermark = manifest.get_watermark(str(source_dir))
+
+    for file_path in files:
+        rel_path = str(file_path.relative_to(source_dir))
+
+        # T016a: Exclude temporary/partial/hidden files (FR-015)
+        if file_path.name.startswith("."):
+            logger.warning("Skipping hidden file: %s", rel_path)
+            skipped_count += 1
+            continue
+        if file_path.name.endswith(".tmp"):
+            logger.warning("Skipping temporary file: %s", rel_path)
+            skipped_count += 1
+            continue
+        if file_path.name.endswith(".partial"):
+            logger.warning("Skipping partial file: %s", rel_path)
+            skipped_count += 1
+            continue
+
+        file_stat = file_path.stat()
+        file_mtime = file_stat.st_mtime
+
+        # Mtime pre-filter (cheap)
+        if not full_refresh and watermark is not None and file_mtime <= watermark:
+            logger.debug("Skipping %s (mtime <= watermark)", rel_path)
+            skipped_count += 1
+            continue
+
+        # Compute hash (I/O)
+        file_hash = compute_file_hash(file_path)
+
+        # Check manifest skip
+        if not full_refresh and manifest.should_skip(rel_path, file_hash):
+            logger.info("Skipping %s (already ingested, hash matches)", rel_path)
+            skipped_count += 1
+            continue
+
+        pending.append((file_path, file_hash, file_mtime))
+
+    return pending, skipped_count
+
+
 def run_pipeline(
     *,
     source_dir: str | Path = DEFAULT_SOURCE_DIR,
     db_path: str | Path = DEFAULT_DB_PATH,
+    full_refresh: bool = False,
 ) -> RunResult:
     """Execute the ingestion pipeline.
 
@@ -260,9 +331,13 @@ def run_pipeline(
     lineage metadata, and loads into the DuckDB warehouse. Tracks the run
     in the ingestion_runs table per FR-016.
 
+    Supports incremental ingestion via manifest tracking (Feature 008).
+    Use full_refresh=True to bypass manifest and reprocess all files.
+
     Args:
         source_dir: Directory containing source Parquet files.
         db_path: Path to the DuckDB database file.
+        full_refresh: If True, bypass manifest and reprocess all files.
 
     Returns:
         RunResult with aggregate processing statistics.
@@ -271,7 +346,7 @@ def run_pipeline(
     started_at = datetime.now(UTC)
     start_time = time.monotonic()
 
-    result = RunResult(run_id=run_id)
+    result = RunResult(run_id=run_id, full_refresh=full_refresh)
 
     # Connect and ensure tables exist (FR-003)
     conn = connect(db_path)
@@ -279,18 +354,66 @@ def run_pipeline(
         create_tables(conn)
         create_run(conn, run_id=run_id, started_at=started_at.isoformat())
 
+        # Initialize manifest (Feature 008)
+        manifest = ManifestStore(conn)
+        manifest.create_tables()
+
+        # Full refresh: reset all entries and delete watermark
+        if full_refresh:
+            manifest.reset_all_to_pending(run_id)
+            manifest.delete_watermark(str(source_dir))
+
         # Load existing IDs for cross-file deduplication (US3)
         existing_ids = get_existing_transaction_ids(conn)
 
         # Discover files
+        source_path = Path(source_dir)
         files = discover_parquet_files(source_dir)
+        result.files_checked = len(files)
         if not files:
             logger.info("No Parquet files found — nothing to ingest")
 
-        # Process each file
-        for file_path in files:
+        # Filter by manifest (or not, if full_refresh)
+        pending_files, skipped_from_manifest = _filter_files_by_manifest(
+            files, manifest, source_path, full_refresh,
+        )
+        result.files_skipped = skipped_from_manifest
+
+        # Track max mtime for watermark update
+        max_mtime: float | None = None
+
+        # Process each pending file with two-phase commit
+        for file_path, file_hash, file_mtime in pending_files:
+            rel_path = str(file_path.relative_to(source_path))
+            file_stat = file_path.stat()
+
+            # Phase 1: upsert pending
+            manifest.upsert_pending(
+                file_path=rel_path,
+                file_hash=file_hash,
+                file_size_bytes=file_stat.st_size,
+                file_mtime=file_mtime,
+                run_id=run_id,
+            )
+
+            # Process file
             file_result = _process_file(conn, file_path, run_id, existing_ids)
             result.add_file_result(file_result)
+
+            # Phase 2: mark success or failed
+            if file_result.error is not None:
+                manifest.mark_failed(rel_path, file_result.error)
+                result.files_failed += 1
+            else:
+                manifest.mark_success(rel_path)
+                result.files_ingested += 1
+                # Track max mtime for watermark
+                if max_mtime is None or file_mtime > max_mtime:
+                    max_mtime = file_mtime
+
+        # Update watermark if files were ingested
+        if max_mtime is not None:
+            manifest.update_watermark(str(source_dir), max_mtime)
 
         # Finalize
         result.status = RunStatus.COMPLETED
@@ -306,6 +429,10 @@ def run_pipeline(
             records_quarantined=result.records_quarantined,
             duplicates_skipped=result.duplicates_skipped,
             elapsed_seconds=result.elapsed_seconds,
+            files_checked=result.files_checked,
+            files_skipped=result.files_skipped,
+            files_ingested=result.files_ingested,
+            files_failed=result.files_failed,
         )
 
     except Exception as exc:
@@ -324,6 +451,10 @@ def run_pipeline(
                 records_quarantined=result.records_quarantined,
                 duplicates_skipped=result.duplicates_skipped,
                 elapsed_seconds=result.elapsed_seconds,
+                files_checked=result.files_checked,
+                files_skipped=result.files_skipped,
+                files_ingested=result.files_ingested,
+                files_failed=result.files_failed,
             )
         except Exception:
             logger.exception("Failed to update run record")

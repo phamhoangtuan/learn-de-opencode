@@ -446,11 +446,14 @@ class TestDeduplicationIntegration:
         tmp_db_path: Path,
         sample_transactions_df: pl.DataFrame,
     ) -> None:
-        """Given same file ingested twice, record count unchanged."""
+        """Given same file ingested twice with full_refresh, deduplication still works."""
         _write_parquet(tmp_source_dir, "txns.parquet", sample_transactions_df)
 
         result1 = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
-        result2 = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+        # Use full_refresh to bypass manifest and test deduplication
+        result2 = run_pipeline(
+            source_dir=tmp_source_dir, db_path=tmp_db_path, full_refresh=True
+        )
 
         assert result1.records_loaded == 5
         assert result2.records_loaded == 0
@@ -517,11 +520,14 @@ class TestDeduplicationIntegration:
         tmp_db_path: Path,
         sample_transactions_df: pl.DataFrame,
     ) -> None:
-        """Given duplicates, ingestion_runs table records skipped count."""
+        """Given duplicates with full_refresh, ingestion_runs table records skipped count."""
         _write_parquet(tmp_source_dir, "txns.parquet", sample_transactions_df)
 
         run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
-        result2 = run_pipeline(source_dir=tmp_source_dir, db_path=tmp_db_path)
+        # Use full_refresh to bypass manifest and test deduplication tracking
+        result2 = run_pipeline(
+            source_dir=tmp_source_dir, db_path=tmp_db_path, full_refresh=True
+        )
 
         conn = duckdb.connect(str(tmp_db_path))
         try:

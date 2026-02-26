@@ -1,5 +1,6 @@
-# Data & Logs
-data/
+# Data & Logs — ignore top-level data/ but keep src/data/ (source assets)
+/data/
+!src/data/
 logs/
 *.log
 

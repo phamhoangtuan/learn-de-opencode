@@ -46,6 +46,11 @@ class RunResult:
         duplicates_skipped: Total duplicate records skipped.
         elapsed_seconds: Total run duration in seconds.
         file_results: Per-file processing results.
+        files_checked: Total files discovered before manifest filter (Feature 008).
+        files_skipped: Files skipped by manifest (already ingested, same hash).
+        files_ingested: Files successfully ingested this run.
+        files_failed: Files that failed ingestion this run.
+        full_refresh: Whether this run used --full-refresh flag.
     """
 
     run_id: str
@@ -56,6 +61,11 @@ class RunResult:
     duplicates_skipped: int = 0
     elapsed_seconds: float = 0.0
     file_results: list[FileResult] = field(default_factory=list)
+    files_checked: int = 0
+    files_skipped: int = 0
+    files_ingested: int = 0
+    files_failed: int = 0
+    full_refresh: bool = False
 
     def add_file_result(self, result: FileResult) -> None:
         """Add a file result and update aggregate counters.
@@ -75,14 +85,20 @@ class RunResult:
         Returns:
             Formatted summary string.
         """
+        mode = "Full refresh — manifest bypassed" if self.full_refresh else "Incremental"
         return (
             f"Pipeline Run Summary ({self.run_id}):\n"
-            f"  Status:              {self.status.value}\n"
-            f"  Files processed:     {self.files_processed}\n"
-            f"  Records loaded:      {self.records_loaded}\n"
+            f"  Status:             {self.status.value}\n"
+            f"  Mode:               {mode}\n"
+            f"  Files checked:      {self.files_checked}\n"
+            f"  Files skipped:      {self.files_skipped}\n"
+            f"  Files ingested:     {self.files_ingested}\n"
+            f"  Files failed:       {self.files_failed}\n"
+            f"  Files processed:   {self.files_processed}\n"
+            f"  Records loaded:    {self.records_loaded}\n"
             f"  Records quarantined: {self.records_quarantined}\n"
-            f"  Duplicates skipped:  {self.duplicates_skipped}\n"
-            f"  Elapsed time:        {self.elapsed_seconds:.2f}s"
+            f"  Duplicates skipped: {self.duplicates_skipped}\n"
+            f"  Elapsed time:       {self.elapsed_seconds:.2f}s"
         )
 
 
