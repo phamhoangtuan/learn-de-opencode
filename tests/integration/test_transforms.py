@@ -48,6 +48,26 @@ def warehouse_db(tmp_path: Path) -> Path:
         )
     """)
 
+    # Create dim_accounts_sk_seq and dim_accounts for mart__account_history transform
+    conn.execute("CREATE SEQUENCE IF NOT EXISTS dim_accounts_sk_seq START 1;")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS dim_accounts (
+            account_sk          BIGINT      PRIMARY KEY DEFAULT nextval('dim_accounts_sk_seq'),
+            account_id          VARCHAR     NOT NULL,
+            primary_currency    VARCHAR     NOT NULL,
+            primary_category    VARCHAR     NOT NULL,
+            transaction_count   BIGINT      NOT NULL,
+            total_spend         DOUBLE      NOT NULL,
+            first_seen          DATE        NOT NULL,
+            last_seen           DATE        NOT NULL,
+            row_hash            VARCHAR     NOT NULL,
+            valid_from          TIMESTAMPTZ NOT NULL,
+            valid_to            TIMESTAMPTZ,
+            is_current          BOOLEAN     NOT NULL DEFAULT TRUE,
+            run_id              VARCHAR     NOT NULL
+        )
+    """)
+
     # Insert realistic test data spanning multiple dates, categories, accounts, currencies
     conn.execute("""
         INSERT INTO transactions VALUES
@@ -113,7 +133,7 @@ class TestFullTransformPipeline:
         result = run_transforms(db_path=warehouse_db, transforms_dir=transforms_dir)
 
         assert result.status == TransformStatus.COMPLETED
-        assert result.models_executed == 3
+        assert result.models_executed == 4
         assert result.models_failed == 0
 
         # Verify all outputs exist
@@ -177,7 +197,7 @@ class TestFullTransformPipeline:
         # Columns: run_id, started_at, completed_at, status,
         # models_executed, models_failed, elapsed_seconds, error_message
         assert row[3] == "completed"  # status
-        assert row[4] == 3            # models_executed
+        assert row[4] == 4            # models_executed
         assert row[5] == 0            # models_failed
         assert row[6] > 0             # elapsed_seconds
 

@@ -86,6 +86,29 @@ CREATE TABLE IF NOT EXISTS manifest_metadata (
 );
 """
 
+# T005: DDL for dim_accounts surrogate key sequence and SCD2 dimension table
+_DIM_ACCOUNTS_SK_SEQ_DDL: str = """
+CREATE SEQUENCE IF NOT EXISTS dim_accounts_sk_seq START 1;
+"""
+
+_DIM_ACCOUNTS_DDL: str = """
+CREATE TABLE IF NOT EXISTS dim_accounts (
+    account_sk          BIGINT      PRIMARY KEY DEFAULT nextval('dim_accounts_sk_seq'),
+    account_id          VARCHAR     NOT NULL,
+    primary_currency    VARCHAR     NOT NULL,
+    primary_category    VARCHAR     NOT NULL,
+    transaction_count   BIGINT      NOT NULL,
+    total_spend         DOUBLE      NOT NULL,
+    first_seen          DATE        NOT NULL,
+    last_seen           DATE        NOT NULL,
+    row_hash            VARCHAR     NOT NULL,
+    valid_from          TIMESTAMPTZ NOT NULL,
+    valid_to            TIMESTAMPTZ,
+    is_current          BOOLEAN     NOT NULL DEFAULT TRUE,
+    run_id              VARCHAR     NOT NULL
+);
+"""
+
 # T003b: Migration guards for existing databases that lack the new columns
 _INGESTION_RUNS_MIGRATION_DDLS: list[str] = [
     "ALTER TABLE ingestion_runs ADD COLUMN IF NOT EXISTS files_checked  INTEGER DEFAULT 0;",
@@ -131,6 +154,9 @@ def create_tables(conn: duckdb.DuckDBPyConnection) -> None:
     # T003b: Migration guards for existing databases
     for migration_ddl in _INGESTION_RUNS_MIGRATION_DDLS:
         conn.execute(migration_ddl)
+    # T006: dim_accounts dimension DDL
+    conn.execute(_DIM_ACCOUNTS_SK_SEQ_DDL)
+    conn.execute(_DIM_ACCOUNTS_DDL)
     logger.info("Warehouse tables ready")
 
 

@@ -6,12 +6,13 @@
 # ///
 """Run the full learn_de pipeline end-to-end.
 
-Wires all 5 pipeline steps into a single runnable DAG:
+Wires all 6 pipeline steps into a single runnable DAG:
   1. generate   — Synthetic transaction data generation
   2. ingest     — DuckDB ingestion from Parquet
   3. transforms — SQL transformation layer
-  4. checks     — Data quality checks
-  5. dashboard  — Evidence dashboard source refresh
+  4. dim_build  — SCD Type 2 accounts dimension build
+  5. checks     — Data quality checks
+  6. dashboard  — Evidence dashboard source refresh
 
 Usage:
     uv run src/run_pipeline.py                              # full pipeline
@@ -63,10 +64,16 @@ PIPELINE_STEPS: list[PipelineStep] = [
         depends_on=["ingest"],
     ),
     PipelineStep(
+        name="dim_build",
+        command=["uv", "run", "src/run_dim_build.py"],
+        cwd=None,
+        depends_on=["transforms"],
+    ),
+    PipelineStep(
         name="checks",
         command=["uv", "run", "src/run_checks.py"],
         cwd=None,
-        depends_on=["transforms"],
+        depends_on=["dim_build"],
     ),
     PipelineStep(
         name="dashboard",
