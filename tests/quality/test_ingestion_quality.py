@@ -419,10 +419,10 @@ class TestCoverage:
         finally:
             conn.close()
 
-    def test_ingestion_runs_has_9_columns(
+    def test_ingestion_runs_has_13_columns(
         self, _multi_file_warehouse: Path,
     ) -> None:
-        """Ingestion_runs table must have exactly 9 columns."""
+        """Ingestion_runs table must have exactly 13 columns."""
         conn = duckdb.connect(str(_multi_file_warehouse))
         try:
             cols = conn.execute(
@@ -435,6 +435,7 @@ class TestCoverage:
                 "run_id", "started_at", "completed_at", "status",
                 "files_processed", "records_loaded", "records_quarantined",
                 "duplicates_skipped", "elapsed_seconds",
+                "files_checked", "files_skipped", "files_ingested", "files_failed",
             ]
             assert col_names == expected
         finally:

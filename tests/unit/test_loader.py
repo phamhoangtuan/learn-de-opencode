@@ -96,6 +96,7 @@ class TestCreateTables:
             "run_id", "started_at", "completed_at", "status",
             "files_processed", "records_loaded", "records_quarantined",
             "duplicates_skipped", "elapsed_seconds",
+            "files_checked", "files_skipped", "files_ingested", "files_failed",
         }
         assert cols == expected
 
