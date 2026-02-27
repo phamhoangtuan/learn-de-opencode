@@ -146,7 +146,35 @@ Check Run Summary (abc123...):
 
 Exit code is 1 only when a **critical** check fails. Warn-only failures exit with 0.
 
-### 6. Launch the Dashboard
+### 6. Build the Data Catalog
+
+```bash
+uv run src/run_catalog.py
+```
+
+This introspects all tables and views in the DuckDB warehouse, merges business metadata from `src/metadata/catalog.yaml`, and persists a browsable catalog to `catalog_tables` and `catalog_columns` tables.
+
+**Catalog options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--db-path` | data/warehouse/transactions.duckdb | Path to DuckDB database |
+| `--yaml-path` | src/metadata/catalog.yaml | Path to YAML business metadata |
+| `--verbose` | off | Enable debug-level logging |
+
+The builder outputs a summary:
+
+```
+Catalog Build Summary:
+  Status:             completed
+  Tables catalogued:  14
+  Columns catalogued: 95
+  Elapsed time:       0.12s
+```
+
+Re-running is safe -- it fully rebuilds the catalog each time (idempotent DELETE + INSERT).
+
+### 7. Launch the Dashboard
 
 ```bash
 cd dashboard && npm run dev
@@ -158,6 +186,7 @@ This starts an [Evidence.dev](https://evidence.dev) dashboard at `http://localho
 - **Financial Analytics** -- daily spend by category charts, monthly account summaries, top merchants, and currency breakdowns
 - **Ingestion Health** -- per-run metrics (records loaded, quarantined, duplicates), run history table, and records trend
 - **Data Quality** -- latest check run results, per-check status with severity and violations, and outcomes over time
+- **Data Catalog** -- browsable registry of all warehouse tables and columns, with zone distribution, descriptions, and sample values
 
 The dashboard connects to the DuckDB warehouse in read-only mode -- it never modifies your data. Make sure you have run steps 1-4 first to populate the warehouse.
 
@@ -168,7 +197,7 @@ The dashboard connects to the DuckDB warehouse in read-only mode -- it never mod
 cd dashboard && npm install
 ```
 
-### 7. Query the Warehouse
+### 8. Query the Warehouse
 
 ```python
 import duckdb
@@ -235,7 +264,8 @@ conn.close()
 - **Check metadata** -- every check run tracked in `check_runs` and `check_results` tables
 - **SCD Type 2 dimensions** -- `dim_accounts` slowly changing dimension with surrogate keys, valid_from/valid_to tracking, and is_current flag
 - **Star schema fact table** -- `fct_transactions` joins transactions to `dim_accounts` via point-in-time SCD2 surrogate key lookup with unknown member handling
-- **Interactive dashboard** -- Evidence.dev dashboard with financial analytics, pipeline health, and data quality pages
+- **Data catalog** -- auto-generated catalog introspecting all warehouse objects, enriched with YAML business metadata (descriptions, zones, owners, PKs)
+- **Interactive dashboard** -- Evidence.dev dashboard with financial analytics, pipeline health, data quality, and data catalog pages
 
 ## Data Model
 
@@ -358,6 +388,34 @@ Only includes completed transactions. Grain: (month, account_id, currency).
 | sample_violations | VARCHAR | JSON of up to 5 violating rows |
 | elapsed_seconds | DOUBLE | Execution time for this check |
 
+**`catalog_tables`** -- data catalog registry of all warehouse tables and views
+| Column | Type | Description |
+|--------|------|-------------|
+| table_name | VARCHAR (PK) | Table/view name |
+| table_schema | VARCHAR | Schema (always 'main') |
+| table_type | VARCHAR | BASE TABLE or VIEW |
+| zone | VARCHAR | raw/staging/dimension/fact/mart/metadata |
+| description | VARCHAR | Business description from YAML |
+| owner | VARCHAR | Owner from YAML |
+| source_sql_file | VARCHAR | Path to SQL file that creates this object |
+| depends_on | VARCHAR | Comma-separated dependency list |
+| row_count | BIGINT | Row count (NULL for VIEWs) |
+| column_count | INTEGER | Number of columns |
+| last_built_at | TIMESTAMPTZ | When catalog was last built |
+
+**`catalog_columns`** -- column-level metadata for all warehouse tables
+| Column | Type | Description |
+|--------|------|-------------|
+| id | VARCHAR (PK) | UUID |
+| table_name | VARCHAR (FK) | Parent table |
+| column_name | VARCHAR | Column name |
+| ordinal_position | INTEGER | Column order |
+| data_type | VARCHAR | DuckDB type |
+| is_nullable | BOOLEAN | From information_schema |
+| is_pk | BOOLEAN | From YAML metadata |
+| description | VARCHAR | From YAML metadata |
+| sample_values | VARCHAR | JSON array of up to 3 distinct values |
+
 ## Running Tests
 
 ```bash
@@ -389,6 +447,13 @@ src/
   run_checks.py                   # CLI: data quality check runner
   run_dim_build.py                # CLI: SCD Type 2 dimension builder
   run_pipeline.py                 # CLI: full pipeline orchestrator
+  run_catalog.py                  # CLI: data catalog builder
+  catalog/
+    models.py                     # Domain models (CatalogTableEntry, etc.)
+    parser.py                     # YAML loader + SQL header scanner
+    runner.py                     # Catalog build orchestration
+  metadata/
+    catalog.yaml                  # Business metadata (zones, descriptions, owners)
   ingestion/
     pipeline.py                   # Pipeline orchestration
     validator.py                  # Schema + value validation
@@ -437,6 +502,7 @@ dashboard/                          # Evidence.dev dashboard (Feature 005)
     financial-analytics.md        # Financial analytics
     ingestion-health.md           # Ingestion health monitoring
     data-quality.md               # Data quality check results
+    data-catalog.md               # Data catalog browser
   sources/
     warehouse/                    # DuckDB source connection + queries
       fct_transactions.sql        # Fact table source query
