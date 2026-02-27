@@ -76,6 +76,30 @@ limit 10
     yFmt=num2
 />
 
+## Star Schema: Fact Transactions
+
+```sql fct_summary
+select
+    account_sk,
+    account_id,
+    count(*) as transaction_count,
+    sum(amount) as total_amount,
+    min(transaction_date) as first_transaction,
+    max(transaction_date) as last_transaction
+from warehouse.fct_transactions
+group by account_sk, account_id
+order by total_amount desc
+```
+
+<DataTable data={fct_summary} rows=20>
+    <Column id=account_sk title="Account SK"/>
+    <Column id=account_id title="Account ID"/>
+    <Column id=transaction_count title="Transactions"/>
+    <Column id=total_amount fmt=num2 title="Total Amount"/>
+    <Column id=first_transaction title="First Txn"/>
+    <Column id=last_transaction title="Last Txn"/>
+</DataTable>
+
 ## Currency Breakdown
 
 ```sql currency_breakdown

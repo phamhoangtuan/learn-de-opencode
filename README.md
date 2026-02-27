@@ -102,7 +102,21 @@ Transform Run Summary (abc123...):
 
 All transforms use `CREATE OR REPLACE` patterns, making re-runs fully idempotent. Each execution is tracked in a `transform_runs` metadata table.
 
-### 4. Run Data Quality Checks
+### 4. Build Dimensions & Fact Tables
+
+```bash
+# Build SCD Type 2 dim_accounts dimension
+uv run src/run_dim_build.py
+
+# Build fct_transactions fact table
+uv run src/run_transforms.py --transforms-dir src/fact_transforms
+```
+
+The dimension build creates/updates `dim_accounts` (SCD Type 2) from staging data. The fact build materializes `fct_transactions`, joining transactions to `dim_accounts` via point-in-time surrogate key lookup.
+
+Both steps are included in `run_pipeline.py` and execute automatically as part of the full pipeline.
+
+### 5. Run Data Quality Checks
 
 ```bash
 uv run src/run_checks.py
@@ -123,8 +137,8 @@ The runner outputs a summary:
 ```
 Check Run Summary (abc123...):
   Status:          passed
-  Total checks:    6
-  Passed:          6
+  Total checks:    13
+  Passed:          13
   Failed:          0
   Errored:         0
   Elapsed time:    0.03s
@@ -132,7 +146,7 @@ Check Run Summary (abc123...):
 
 Exit code is 1 only when a **critical** check fails. Warn-only failures exit with 0.
 
-### 5. Launch the Dashboard
+### 6. Launch the Dashboard
 
 ```bash
 cd dashboard && npm run dev
@@ -154,7 +168,7 @@ The dashboard connects to the DuckDB warehouse in read-only mode -- it never mod
 cd dashboard && npm install
 ```
 
-### 6. Query the Warehouse
+### 7. Query the Warehouse
 
 ```python
 import duckdb
@@ -219,6 +233,8 @@ conn.close()
 - **Transform metadata** -- every transform execution tracked in `transform_runs` table
 - **Data quality checks** -- dbt-inspired SQL-based checks with severity levels (critical/warn), violation sampling, and exit code control
 - **Check metadata** -- every check run tracked in `check_runs` and `check_results` tables
+- **SCD Type 2 dimensions** -- `dim_accounts` slowly changing dimension with surrogate keys, valid_from/valid_to tracking, and is_current flag
+- **Star schema fact table** -- `fct_transactions` joins transactions to `dim_accounts` via point-in-time SCD2 surrogate key lookup with unknown member handling
 - **Interactive dashboard** -- Evidence.dev dashboard with financial analytics, pipeline health, and data quality pages
 
 ## Data Model
@@ -251,6 +267,37 @@ The DuckDB warehouse contains the following tables and views:
 **`stg_transactions`** (VIEW) -- standardized version of `transactions`
 - Renames `timestamp` to `transaction_timestamp` (avoids SQL reserved word)
 - Passes through all columns including lineage
+
+### Dimension Zone
+
+**`dim_accounts`** (TABLE, SCD Type 2) -- slowly changing dimension for accounts
+| Column | Type | Description |
+|--------|------|-------------|
+| account_sk | INTEGER (PK) | Auto-incrementing surrogate key |
+| account_id | VARCHAR | Natural key (ACC-XXXXX) |
+| valid_from | TIMESTAMPTZ | Row effective start |
+| valid_to | TIMESTAMPTZ | Row effective end (NULL = current) |
+| is_current | BOOLEAN | True for the current version |
+
+### Fact Zone
+
+**`fct_transactions`** (TABLE) -- star schema fact table joining transactions to dimensions
+| Column | Type | Description |
+|--------|------|-------------|
+| transaction_id | VARCHAR (PK) | Unique transaction identifier |
+| transaction_timestamp | TIMESTAMPTZ | Transaction timestamp (UTC) |
+| transaction_date | DATE | Derived from timestamp |
+| account_sk | INTEGER (FK) | Surrogate key to dim_accounts (-1 = unknown) |
+| account_id | VARCHAR | Natural account identifier |
+| amount | DOUBLE | Transaction amount |
+| currency | VARCHAR | Transaction currency |
+| merchant_name | VARCHAR | Merchant name |
+| category | VARCHAR | Merchant category |
+| transaction_type | VARCHAR | debit or credit |
+| status | VARCHAR | completed, pending, or failed |
+| source_file | VARCHAR | Source Parquet filename |
+| ingested_at | TIMESTAMPTZ | When the record was ingested |
+| run_id | VARCHAR | Pipeline run identifier |
 
 ### Marts Zone
 
@@ -340,6 +387,8 @@ src/
   ingest_transactions.py          # CLI: ingestion pipeline
   run_transforms.py               # CLI: SQL transform runner
   run_checks.py                   # CLI: data quality check runner
+  run_dim_build.py                # CLI: SCD Type 2 dimension builder
+  run_pipeline.py                 # CLI: full pipeline orchestrator
   ingestion/
     pipeline.py                   # Pipeline orchestration
     validator.py                  # Schema + value validation
@@ -366,6 +415,14 @@ src/
     check__unique_daily_spend_grain.sql     # Uniqueness: daily spend grain
     check__unique_monthly_summary_grain.sql # Uniqueness: monthly summary grain
     check__accepted_values_currency.sql     # Validity: allowed currencies
+    check__fct_unique_transaction_id.sql   # Uniqueness: no JOIN fan-out
+    check__fct_no_null_account_sk.sql      # Validity: no NULL surrogate keys
+    check__fct_no_unknown_account_sk.sql   # Completeness: no unknown members
+    check__fct_row_count_matches_staging.sql # Completeness: fact = staging rows
+  dimensions/
+    dim_accounts.py               # SCD Type 2 dimension builder
+  fact_transforms/
+    fact__fct_transactions.sql    # Star schema fact table
   models/                         # Transaction schema (Feature 001)
   lib/                            # Shared utilities
 
@@ -382,6 +439,7 @@ dashboard/                          # Evidence.dev dashboard (Feature 005)
     data-quality.md               # Data quality check results
   sources/
     warehouse/                    # DuckDB source connection + queries
+      fct_transactions.sql        # Fact table source query
 
 specs/                            # Feature specifications
 data/
