@@ -160,6 +160,50 @@ def healthy_warehouse(tmp_path: Path) -> Path:
         )
     """)
 
+    # Populate dim_accounts with current rows for all accounts in transactions
+    conn.execute("""
+        INSERT INTO dim_accounts
+            (account_id, primary_currency, primary_category,
+             transaction_count, total_spend, first_seen, last_seen,
+             row_hash, valid_from, valid_to, is_current, run_id)
+        VALUES
+            ('ACC-001', 'USD', 'Groceries', 3, 85.24,
+             '2026-02-17', '2026-02-18', 'hash001',
+             '2026-02-17 00:00:00+00'::TIMESTAMPTZ, NULL, TRUE, 'run-001'),
+            ('ACC-002', 'EUR', 'Shopping', 2, 158.75,
+             '2026-02-17', '2026-02-18', 'hash002',
+             '2026-02-17 00:00:00+00'::TIMESTAMPTZ, NULL, TRUE, 'run-001'),
+            ('ACC-003', 'JPY', 'Electronics', 1, 1500.00,
+             '2026-02-17', '2026-02-17', 'hash003',
+             '2026-02-17 00:00:00+00'::TIMESTAMPTZ, NULL, TRUE, 'run-001')
+    """)
+
+    # Build fct_transactions from stg_transactions + dim_accounts
+    conn.execute("""
+        CREATE OR REPLACE TABLE fct_transactions AS
+        SELECT
+            stg.transaction_id,
+            stg.transaction_timestamp,
+            stg.transaction_date,
+            COALESCE(d.account_sk, -1) AS account_sk,
+            stg.account_id,
+            stg.amount,
+            stg.currency,
+            stg.merchant_name,
+            stg.category,
+            stg.transaction_type,
+            stg.status,
+            stg.source_file,
+            stg.ingested_at,
+            stg.run_id
+        FROM stg_transactions stg
+        LEFT JOIN dim_accounts d
+          ON  stg.account_id = d.account_id
+          AND stg.transaction_timestamp >= d.valid_from
+          AND stg.transaction_timestamp
+              < COALESCE(d.valid_to, '9999-12-31 23:59:59+00'::TIMESTAMPTZ)
+    """)
+
     conn.close()
     return db_path
 
@@ -173,13 +217,13 @@ class TestHealthyWarehouse:
     """End-to-end tests with healthy data — all checks should pass."""
 
     def test_all_checks_pass(self, healthy_warehouse: Path) -> None:
-        """All 9 pre-built checks pass on a healthy warehouse."""
+        """All 13 pre-built checks pass on a healthy warehouse."""
         result = run_checks(
             db_path=healthy_warehouse, checks_dir=CHECKS_DIR
         )
         assert result.status == RunStatus.PASSED
-        assert result.total_checks == 9
-        assert result.checks_passed == 9
+        assert result.total_checks == 13
+        assert result.checks_passed == 13
         assert result.checks_failed == 0
         assert result.checks_errored == 0
 
@@ -223,7 +267,7 @@ class TestHealthyWarehouse:
             ).fetchone()
             assert run_row is not None
             assert run_row[0] == "passed"
-            assert run_row[1] == 9
+            assert run_row[1] == 13
         finally:
             conn.close()
 

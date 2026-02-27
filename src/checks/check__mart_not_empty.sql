@@ -8,5 +8,8 @@ FROM (
     UNION ALL
     SELECT 'monthly_account_summary' AS table_name,
            (SELECT COUNT(*) FROM monthly_account_summary) AS row_count
+    UNION ALL
+    SELECT 'fct_transactions' AS table_name,
+           (SELECT COUNT(*) FROM fct_transactions) AS row_count
 ) marts
 WHERE row_count = 0;

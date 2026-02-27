@@ -26,6 +26,10 @@ EXPECTED_CHECKS = {
     "check__dim_accounts_single_current.sql",
     "check__dim_accounts_no_overlapping_ranges.sql",
     "check__dim_accounts_no_null_sk.sql",
+    "check__fct_unique_transaction_id.sql",
+    "check__fct_row_count_matches_staging.sql",
+    "check__fct_no_null_account_sk.sql",
+    "check__fct_no_unknown_account_sk.sql",
 }
 
 
@@ -38,7 +42,7 @@ class TestCompleteness:
     """CHK001-CHK004: All check files exist and are parseable."""
 
     def test_chk001_all_six_files_exist(self) -> None:
-        """CHK001: All 9 check SQL files exist (6 original + 3 dim_accounts)."""
+        """CHK001: All 13 check SQL files exist."""
         actual = {f.name for f in CHECKS_DIR.glob("*.sql")}
         assert actual == EXPECTED_CHECKS
 
@@ -69,13 +73,17 @@ class TestCompleteness:
             "dim_accounts_single_current",
             "dim_accounts_no_overlapping_ranges",
             "dim_accounts_no_null_sk",
+            "fct_unique_transaction_id",
+            "fct_row_count_matches_staging",
+            "fct_no_null_account_sk",
+            "fct_no_unknown_account_sk",
         }
         assert names == expected_names
 
     def test_chk004_runner_discovers_all(self) -> None:
         """CHK004: Runner discovers all check files."""
         checks = discover_checks(CHECKS_DIR)
-        assert len(checks) == 9
+        assert len(checks) == 13
 
 
 # ---------------------------------------------------------------------------

@@ -17,6 +17,7 @@ from src.transformer.runner import run_transforms
 
 # Path to the actual SQL transform files
 TRANSFORMS_DIR = Path(__file__).resolve().parent.parent.parent / "src" / "transforms"
+FACT_TRANSFORMS_DIR = Path(__file__).resolve().parent.parent.parent / "src" / "fact_transforms"
 
 
 @pytest.fixture()
@@ -236,3 +237,181 @@ class TestFullTransformPipeline:
 
         assert spend_rows > 0
         assert summary_rows > 0
+
+
+# ---------------------------------------------------------------------------
+# Fact transform pipeline tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def fact_transforms_dir(tmp_path: Path) -> Path:
+    """Copy actual fact transform SQL files to a temp directory.
+
+    Returns:
+        Path to the temporary fact transforms directory.
+    """
+    dest = tmp_path / "fact_transforms"
+    shutil.copytree(FACT_TRANSFORMS_DIR, dest)
+    return dest
+
+
+@pytest.fixture()
+def warehouse_with_dims(warehouse_db: Path) -> Path:
+    """Extend warehouse_db with staging view and populated dim_accounts.
+
+    Runs the staging transform first, then populates dim_accounts with
+    SCD2 rows covering all transaction timestamps.
+
+    Returns:
+        Path to the database with staging + dim_accounts ready.
+    """
+    conn = duckdb.connect(str(warehouse_db))
+
+    # Create staging view (needed before fact build)
+    conn.execute("""
+        CREATE OR REPLACE VIEW stg_transactions AS
+        SELECT
+            transaction_id,
+            "timestamp"         AS transaction_timestamp,
+            transaction_date,
+            amount,
+            currency,
+            merchant_name,
+            category,
+            account_id,
+            transaction_type,
+            status,
+            source_file,
+            ingested_at,
+            run_id
+        FROM transactions
+    """)
+
+    # Populate dim_accounts with current rows for test accounts
+    conn.execute("""
+        INSERT INTO dim_accounts
+            (account_id, primary_currency, primary_category,
+             transaction_count, total_spend, first_seen, last_seen,
+             row_hash, valid_from, valid_to, is_current, run_id)
+        VALUES
+            ('ACC-00001', 'USD', 'Groceries', 5, 375.00,
+             '2026-01-15', '2026-02-01', 'hash001',
+             '2026-01-01 00:00:00+00'::TIMESTAMPTZ, NULL, TRUE, 'run-001'),
+            ('ACC-00002', 'EUR', 'Groceries', 5, 755.00,
+             '2026-01-15', '2026-02-01', 'hash002',
+             '2026-01-01 00:00:00+00'::TIMESTAMPTZ, NULL, TRUE, 'run-001')
+    """)
+
+    conn.close()
+    return warehouse_db
+
+
+class TestFactTransformPipeline:
+    """Integration tests for the fact transform pipeline."""
+
+    def test_fct_transactions_created(
+        self, warehouse_with_dims: Path, fact_transforms_dir: Path
+    ) -> None:
+        """Running fact transforms creates fct_transactions table."""
+        result = run_transforms(
+            db_path=warehouse_with_dims, transforms_dir=fact_transforms_dir
+        )
+
+        assert result.status == TransformStatus.COMPLETED
+        assert result.models_executed == 1
+        assert result.models_failed == 0
+
+        conn = duckdb.connect(str(warehouse_with_dims))
+        tables = conn.execute(
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_schema = 'main'"
+        ).fetchall()
+        table_names = {row[0] for row in tables}
+        assert "fct_transactions" in table_names
+        conn.close()
+
+    def test_row_count_matches_staging(
+        self, warehouse_with_dims: Path, fact_transforms_dir: Path
+    ) -> None:
+        """fct_transactions has same row count as stg_transactions."""
+        run_transforms(
+            db_path=warehouse_with_dims, transforms_dir=fact_transforms_dir
+        )
+
+        conn = duckdb.connect(str(warehouse_with_dims))
+        stg_count = conn.execute(
+            "SELECT COUNT(*) FROM stg_transactions"
+        ).fetchone()[0]
+        fct_count = conn.execute(
+            "SELECT COUNT(*) FROM fct_transactions"
+        ).fetchone()[0]
+        conn.close()
+
+        assert fct_count == stg_count
+        assert fct_count == 10  # 10 test transactions
+
+    def test_account_sk_populated(
+        self, warehouse_with_dims: Path, fact_transforms_dir: Path
+    ) -> None:
+        """Matched accounts get valid surrogate keys, unmatched get -1."""
+        run_transforms(
+            db_path=warehouse_with_dims, transforms_dir=fact_transforms_dir
+        )
+
+        conn = duckdb.connect(str(warehouse_with_dims))
+        # ACC-00001 and ACC-00002 are in dim_accounts
+        matched = conn.execute(
+            "SELECT COUNT(*) FROM fct_transactions "
+            "WHERE account_sk > 0 AND account_id IN ('ACC-00001', 'ACC-00002')"
+        ).fetchone()[0]
+        assert matched > 0
+
+        # No NULL account_sk values
+        nulls = conn.execute(
+            "SELECT COUNT(*) FROM fct_transactions WHERE account_sk IS NULL"
+        ).fetchone()[0]
+        assert nulls == 0
+        conn.close()
+
+    def test_no_duplicate_transaction_id(
+        self, warehouse_with_dims: Path, fact_transforms_dir: Path
+    ) -> None:
+        """No duplicate transaction_id in fct_transactions."""
+        run_transforms(
+            db_path=warehouse_with_dims, transforms_dir=fact_transforms_dir
+        )
+
+        conn = duckdb.connect(str(warehouse_with_dims))
+        dupes = conn.execute(
+            "SELECT transaction_id, COUNT(*) AS cnt "
+            "FROM fct_transactions "
+            "GROUP BY transaction_id HAVING COUNT(*) > 1"
+        ).fetchall()
+        conn.close()
+
+        assert len(dupes) == 0
+
+    def test_idempotent_fact_build(
+        self, warehouse_with_dims: Path, fact_transforms_dir: Path
+    ) -> None:
+        """Running fact transforms twice produces identical output."""
+        run_transforms(
+            db_path=warehouse_with_dims, transforms_dir=fact_transforms_dir
+        )
+        conn = duckdb.connect(str(warehouse_with_dims))
+        count1 = conn.execute(
+            "SELECT COUNT(*) FROM fct_transactions"
+        ).fetchone()[0]
+        conn.close()
+
+        run_transforms(
+            db_path=warehouse_with_dims, transforms_dir=fact_transforms_dir
+        )
+        conn = duckdb.connect(str(warehouse_with_dims))
+        count2 = conn.execute(
+            "SELECT COUNT(*) FROM fct_transactions"
+        ).fetchone()[0]
+        conn.close()
+
+        assert count1 == count2
