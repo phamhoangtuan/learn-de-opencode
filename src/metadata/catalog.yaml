@@ -1,0 +1,159 @@
+# Business metadata overlay for the data catalog.
+# Each top-level key under 'tables' is a table_name matching information_schema.
+# Zone values: raw | staging | dimension | fact | mart | metadata
+
+tables:
+  transactions:
+    zone: raw
+    description: "Raw financial transactions loaded from Parquet files. Each row is one payment event."
+    owner: "data-engineering"
+    columns:
+      transaction_id:
+        description: "Unique transaction identifier (UUID)."
+        is_pk: true
+      timestamp:
+        description: "Transaction timestamp in UTC."
+      amount:
+        description: "Transaction amount in the transaction's native currency."
+      currency:
+        description: "ISO 4217 currency code (USD, EUR, GBP, JPY)."
+      merchant_name:
+        description: "Name of the merchant."
+      category:
+        description: "Merchant category."
+      account_id:
+        description: "Business account identifier (ACC-XXXXX)."
+      transaction_type:
+        description: "Transaction type: debit or credit."
+      status:
+        description: "Transaction status: completed, pending, or failed."
+      transaction_date:
+        description: "Date derived from timestamp for partitioning."
+      source_file:
+        description: "Source Parquet filename for lineage."
+      ingested_at:
+        description: "Timestamp when this row was loaded into the warehouse."
+      run_id:
+        description: "Pipeline run identifier for lineage."
+
+  quarantine:
+    zone: raw
+    description: "Rows rejected during ingestion due to schema or validation failures."
+    owner: "data-engineering"
+    columns:
+      reason:
+        description: "Human-readable description of why the row was quarantined."
+
+  stg_transactions:
+    zone: staging
+    description: "Cleaned and renamed view over raw transactions. Source of truth for all downstream models."
+    owner: "data-engineering"
+    columns:
+      transaction_id:
+        description: "Unique transaction identifier (UUID)."
+        is_pk: true
+      transaction_timestamp:
+        description: "Renamed from 'timestamp' for SQL compatibility."
+
+  dim_accounts:
+    zone: dimension
+    description: "SCD Type 2 accounts dimension. Each row is one version of an account's attributes."
+    owner: "data-engineering"
+    columns:
+      account_sk:
+        description: "Surrogate key — synthetic integer key for star schema joins."
+        is_pk: true
+      account_id:
+        description: "Natural key (ACC-XXXXX)."
+      valid_from:
+        description: "Start of validity window for this account version (inclusive)."
+      valid_to:
+        description: "End of validity window (exclusive). NULL means currently active."
+      is_current:
+        description: "True for the most recent version of each account."
+      row_hash:
+        description: "MD5 hash of business attribute columns used to detect SCD2 changes."
+
+  fct_transactions:
+    zone: fact
+    description: "Star schema fact table joining transactions to dim_accounts via surrogate key."
+    owner: "data-engineering"
+    columns:
+      transaction_id:
+        description: "Unique transaction identifier."
+        is_pk: true
+      account_sk:
+        description: "Foreign key to dim_accounts. -1 for unmatched accounts."
+
+  daily_spend_by_category:
+    zone: mart
+    description: "Daily aggregation of debit spending by category and currency."
+    owner: "analytics"
+    columns:
+      transaction_date:
+        description: "Spending date."
+      category:
+        description: "Merchant category."
+      currency:
+        description: "Transaction currency."
+      total_amount:
+        description: "Sum of all completed debit transaction amounts for this grain."
+      avg_amount:
+        description: "Average transaction amount for this date/category/currency grain."
+      transaction_count:
+        description: "Number of transactions in this grain."
+
+  monthly_account_summary:
+    zone: mart
+    description: "Monthly rollup of debits, credits, and net flow per account and currency."
+    owner: "analytics"
+    columns:
+      month:
+        description: "First day of the month."
+      account_id:
+        description: "Account identifier."
+      currency:
+        description: "Transaction currency."
+      total_debits:
+        description: "Sum of debit amounts for the month."
+      total_credits:
+        description: "Sum of credit amounts for the month."
+      net_flow:
+        description: "Total credits minus total debits for the month."
+      transaction_count:
+        description: "Number of transactions in this grain."
+
+  ingestion_runs:
+    zone: metadata
+    description: "Audit log of each ingestion pipeline run with statistics."
+    owner: "data-engineering"
+
+  transform_runs:
+    zone: metadata
+    description: "Audit log of each SQL transformation run with model counts and timing."
+    owner: "data-engineering"
+
+  check_runs:
+    zone: metadata
+    description: "Audit log of each data quality check run with aggregate outcomes."
+    owner: "data-engineering"
+
+  check_results:
+    zone: metadata
+    description: "Per-check results linked to check_runs with severity and violations."
+    owner: "data-engineering"
+
+  pipeline_runs:
+    zone: metadata
+    description: "Audit log of each full end-to-end pipeline orchestration run."
+    owner: "data-engineering"
+
+  catalog_tables:
+    zone: metadata
+    description: "Data catalog registry of all warehouse tables and views."
+    owner: "data-engineering"
+
+  catalog_columns:
+    zone: metadata
+    description: "Data catalog column-level metadata for all warehouse tables."
+    owner: "data-engineering"
